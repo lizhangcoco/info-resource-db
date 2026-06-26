@@ -1,0 +1,57 @@
+<h2>电商价格采集系统 — 架构方案对比</h2>
+<p class="subtitle">请选择你倾向的架构方向，我们将基于此进行详细设计</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>轻量级单体架构（推荐）</h3>
+      <p>Python Flask + SQLite + ECharts，一个进程搞定所有功能</p>
+      <ul style="margin-top:8px;font-size:13px;color:#666;">
+        <li>✅ 部署简单，一条命令启动</li>
+        <li>✅ 资源占用低，适合单机运行</li>
+        <li>✅ 维护成本低，代码结构清晰</li>
+        <li>⚠️ 并发能力有限（适合个人/小团队）</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>前后端分离架构</h3>
+      <p>Vue/React前端 + Python FastAPI后端 + PostgreSQL</p>
+      <ul style="margin-top:8px;font-size:13px;color:#666;">
+        <li>✅ 前后端独立开发部署</li>
+        <li>✅ 扩展性好，支持多端接入</li>
+        <li>✅ 性能更强，并发能力好</li>
+        <li>⚠️ 部署复杂，需要多个服务</li>
+        <li>⚠️ 开发周期长，维护成本高</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>微服务任务队列架构</h3>
+      <p>采集任务队列 + 多Worker节点 + 数据服务 + Web前端</p>
+      <ul style="margin-top:8px;font-size:13px;color:#666;">
+        <li>✅ 分布式采集，支持大规模爬取</li>
+        <li>✅ 任务解耦，稳定性高</li>
+        <li>✅ 水平扩展，按需增加Worker</li>
+        <li>⚠️ 架构最复杂，运维成本最高</li>
+        <li>⚠️ 过度设计，当前需求用不上</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:32px;">
+  <h3>我的推荐：方案A — 轻量级单体架构</h3>
+  <p style="color:#666;margin-top:8px;">
+    考虑到你的需求是"命令行工具 + 演示网页"，且以模拟数据为主、框架通用可扩展，
+    方案A是最佳选择。它足够简单可以快速交付，同时模块化设计也为未来升级留足空间。
+    如果后续需要扩展，再逐步演进到方案B或C也很容易。
+  </p>
+</div>

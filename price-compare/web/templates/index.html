@@ -3,109 +3,164 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>电商商品价格比价系统</title>
+    <title>电商比价系统 - 多平台价格实时对比</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
 </head>
 <body>
-    <div class="header">
-        <div class="container">
-            <h1>🛒 电商商品价格比价系统</h1>
-            <div class="search-area">
-                <div class="search-input-wrap">
-                    <span class="search-icon">🔍</span>
-                    <input type="text" id="keywordInput" placeholder="输入商品关键词，如：iPhone 15 Pro、戴森吹风机..." onkeydown="if(event.key==='Enter') doSearch()">
-                </div>
-                <button class="search-btn" id="searchBtn" onclick="doSearch()">
-                    <span>🔎</span> 开始比价
-                </button>
-            </div>
-            <div class="platform-filters">
-                <label class="platform-filter">
-                    <input type="checkbox" id="plat-jd" checked value="jd"> 京东
-                </label>
-                <label class="platform-filter">
-                    <input type="checkbox" id="plat-taobao" checked value="taobao"> 淘宝
-                </label>
-                <label class="platform-filter">
-                    <input type="checkbox" id="plat-pinduoduo" checked value="pinduoduo"> 拼多多
-                </label>
-            </div>
-            <div class="demo-keywords">
-                <span style="font-size:12px;opacity:0.8;">试试：</span>
-                <span class="demo-tag" onclick="quickSearch('iPhone 15 Pro')">iPhone 15 Pro</span>
-                <span class="demo-tag" onclick="quickSearch('AirPods Pro 2')">AirPods Pro 2</span>
-                <span class="demo-tag" onclick="quickSearch('戴森吹风机 HD15')">戴森吹风机 HD15</span>
-            </div>
-        </div>
-    </div>
-
-    <div class="container main-content">
-        <div class="stats-section">
-            <div class="stats-grid" id="statsGrid">
-                <div class="stat-card">
-                    <div class="stat-label">采集商品</div>
-                    <div class="stat-value" id="stat-total">0 件</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-label">最低价</div>
-                    <div class="stat-value success" id="stat-min">¥0</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-label">均价</div>
-                    <div class="stat-value warning" id="stat-avg">¥0</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-label">推荐商品</div>
-                    <div class="stat-value purple" id="stat-rec">0 款</div>
-                </div>
-            </div>
-        </div>
-
-        <div class="content-grid">
-            <div class="panel">
-                <div class="panel-header">
-                    <div class="panel-title">📋 商品列表</div>
-                    <div class="panel-actions">
-                        <select class="sort-select" id="sortSelect" onchange="sortProducts()">
-                            <option value="price-asc">价格从低到高</option>
-                            <option value="price-desc">价格从高到低</option>
-                            <option value="sales-desc">销量从高到低</option>
-                            <option value="rating-desc">评分从高到低</option>
-                        </select>
+    <div class="container">
+        <header class="header">
+            <div class="header-inner">
+                <div class="header-top">
+                    <div class="logo-section">
+                        <div class="logo-icon">🛒</div>
+                        <div class="logo-text">
+                            <h1>电商比价系统</h1>
+                            <p>京东 · 淘宝 · 拼多多 多平台实时比价</p>
+                        </div>
+                    </div>
+                    <div class="header-badge">
+                        <span class="badge-dot"></span>
+                        <span>实时采集</span>
                     </div>
                 </div>
-                <div class="product-list" id="productList">
-                    <div class="empty-state">
-                        <div class="empty-icon">🔍</div>
-                        <p>输入关键词开始比价</p>
-                        <p style="font-size:12px;margin-top:6px;">支持京东、淘宝、拼多多多平台对比</p>
+
+                <div class="search-section">
+                    <div class="search-main">
+                        <div class="search-input-wrap">
+                            <span class="search-icon">🔍</span>
+                            <input type="text" id="keywordInput" placeholder="输入商品关键词，如：iPhone 15 Pro、戴森吹风机..." onkeydown="if(event.key==='Enter') doSearch()">
+                        </div>
+                        <button class="search-btn" id="searchBtn" onclick="doSearch()">
+                            <span>⚡</span> 开始比价
+                        </button>
+                    </div>
+                    
+                    <div class="platform-filters">
+                        <label class="platform-filter jd-filter">
+                            <input type="checkbox" id="plat-jd" checked value="jd">
+                            <span class="checkbox-custom"></span>
+                            京东
+                        </label>
+                        <label class="platform-filter taobao-filter">
+                            <input type="checkbox" id="plat-taobao" checked value="taobao">
+                            <span class="checkbox-custom"></span>
+                            淘宝
+                        </label>
+                        <label class="platform-filter pdd-filter">
+                            <input type="checkbox" id="plat-pinduoduo" checked value="pinduoduo">
+                            <span class="checkbox-custom"></span>
+                            拼多多
+                        </label>
+                    </div>
+
+                    <div class="demo-keywords">
+                        <span class="label">热门搜索：</span>
+                        <span class="demo-tag" onclick="quickSearch('iPhone 15 Pro')">iPhone 15 Pro</span>
+                        <span class="demo-tag" onclick="quickSearch('AirPods Pro 2')">AirPods Pro 2</span>
+                        <span class="demo-tag" onclick="quickSearch('戴森吹风机 HD15')">戴森吹风机 HD15</span>
+                        <span class="demo-tag" onclick="quickSearch('Nike Air Force')">Nike Air Force</span>
                     </div>
                 </div>
             </div>
+        </header>
 
-            <div class="right-column">
+        <section class="stats-section">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <span class="stat-label">采集商品</span>
+                        <div class="stat-icon blue">📦</div>
+                    </div>
+                    <div class="stat-value blue" id="stat-total">0</div>
+                    <div class="stat-sub">件商品</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <span class="stat-label">最低价</span>
+                        <div class="stat-icon green">💰</div>
+                    </div>
+                    <div class="stat-value green" id="stat-min">¥0</div>
+                    <div class="stat-sub">历史最低</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <span class="stat-label">平均价格</span>
+                        <div class="stat-icon orange">📊</div>
+                    </div>
+                    <div class="stat-value orange" id="stat-avg">¥0</div>
+                    <div class="stat-sub">全网均价</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <span class="stat-label">推荐商品</span>
+                        <div class="stat-icon purple">⭐</div>
+                    </div>
+                    <div class="stat-value purple" id="stat-rec">0</div>
+                    <div class="stat-sub">性价比之选</div>
+                </div>
+            </div>
+        </section>
+
+        <main class="main-content">
+            <div class="content-grid">
                 <div class="panel">
                     <div class="panel-header">
-                        <div class="panel-title">📊 平台价格对比</div>
+                        <div class="panel-title">
+                            <span class="icon">📋</span>
+                            商品列表
+                        </div>
+                        <div class="panel-actions">
+                            <select class="sort-select" id="sortSelect" onchange="sortProducts()">
+                                <option value="price-asc">价格从低到高</option>
+                                <option value="price-desc">价格从高到低</option>
+                                <option value="sales-desc">销量从高到低</option>
+                                <option value="rating-desc">评分从高到低</option>
+                            </select>
+                        </div>
                     </div>
-                    <div class="chart-box" style="height:240px;">
-                        <div id="platformChart" class="chart-container"></div>
+                    <div class="product-list" id="productList">
+                        <div class="empty-state">
+                            <div class="empty-icon">🔍</div>
+                            <p>输入关键词开始比价</p>
+                            <p class="small">支持京东、淘宝、拼多多多平台对比</p>
+                        </div>
                     </div>
                 </div>
 
-                <div class="panel">
-                    <div class="panel-header">
-                        <div class="panel-title">📈 价格趋势</div>
+                <div class="right-column">
+                    <div class="panel">
+                        <div class="panel-header">
+                            <div class="panel-title">
+                                <span class="icon">📊</span>
+                                平台价格对比
+                            </div>
+                        </div>
+                        <div class="chart-box">
+                            <div id="platformChart" class="chart-container"></div>
+                        </div>
                     </div>
-                    <div class="chart-box" style="height:280px;">
-                        <div id="trendChart" class="chart-container"></div>
+
+                    <div class="panel">
+                        <div class="panel-header">
+                            <div class="panel-title">
+                                <span class="icon">📈</span>
+                                价格趋势
+                            </div>
+                        </div>
+                        <div class="chart-box" style="height: 300px;">
+                            <div id="trendChart" class="chart-container"></div>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </main>
     </div>
 
+    <script>
+        window.API_BASE = "{{ url_for('static', filename='').replace('/static/', '/api/').replace('/static', '/api') }}";
+        window.APP_ROOT = "{{ request.script_root or '' }}";
+    </script>
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>
 </html>

@@ -3,7 +3,20 @@ let currentKeyword = '';
 let platformChart = null;
 let trendChart = null;
 let searchPollingTimer = null;
-const API_BASE = window.location.pathname.split('/bijia')[0] + '/bijia';
+
+const getApiBase = () => {
+    if (window.APP_ROOT && window.APP_ROOT !== '') {
+        return window.APP_ROOT;
+    }
+    const path = window.location.pathname;
+    const idx = path.indexOf('/bijia');
+    if (idx >= 0) {
+        return path.slice(0, idx) + '/bijia';
+    }
+    return '';
+};
+
+const API_BASE = getApiBase();
 
 const PLATFORM_NAMES = {
     jd: '京东',
@@ -117,7 +130,7 @@ async function doSearch() {
         pollSearchStatus(data.record_id);
     } catch (e) {
         btn.disabled = false;
-        btn.innerHTML = '<span>🔎</span> 开始比价';
+        btn.innerHTML = '<span>⚡</span> 开始比价';
         document.getElementById('productList').innerHTML = `
             <div class="empty-state">
                 <div class="empty-icon">❌</div>
@@ -141,7 +154,7 @@ function pollSearchStatus(recordId) {
                 clearInterval(searchPollingTimer);
                 const btn = document.getElementById('searchBtn');
                 btn.disabled = false;
-                btn.innerHTML = '<span>🔎</span> 开始比价';
+                btn.innerHTML = '<span>⚡</span> 开始比价';
 
                 const products = data.products || [];
                 currentProducts = products;
@@ -153,7 +166,7 @@ function pollSearchStatus(recordId) {
                 clearInterval(searchPollingTimer);
                 const btn = document.getElementById('searchBtn');
                 btn.disabled = false;
-                btn.innerHTML = '<span>🔎</span> 开始比价';
+                btn.innerHTML = '<span>⚡</span> 开始比价';
                 document.getElementById('productList').innerHTML = `
                     <div class="empty-state">
                         <div class="empty-icon">❌</div>
@@ -164,7 +177,7 @@ function pollSearchStatus(recordId) {
                 clearInterval(searchPollingTimer);
                 const btn = document.getElementById('searchBtn');
                 btn.disabled = false;
-                btn.innerHTML = '<span>🔎</span> 开始比价';
+                btn.innerHTML = '<span>⚡</span> 开始比价';
             }
         } catch (e) {
             console.error(e);
@@ -228,11 +241,11 @@ function renderProducts(products) {
     const byPrice = [...products].sort((a, b) => a.price - b.price);
     byPrice.slice(0, 3).forEach(p => recSet.add(p.product_key));
 
-    list.innerHTML = sorted.map(p => {
+    list.innerHTML = sorted.map((p, idx) => {
         const isRec = recSet.has(p.product_key);
         const icon = getProductIcon(p.title);
         return `
-            <div class="product-item ${isRec ? 'recommended' : ''}" onclick="window.open('${p.url}', '_blank')">
+            <div class="product-item ${isRec ? 'recommended' : ''}" style="animation-delay: ${idx * 0.02}s" onclick="window.open('${p.url}', '_blank')">
                 <div class="product-image">${icon}</div>
                 <div class="product-info">
                     <div class="product-tags">
@@ -240,11 +253,11 @@ function renderProducts(products) {
                         <span class="tag ${p.platform}">${PLATFORM_NAMES[p.platform] || p.platform}</span>
                     </div>
                     <div class="product-title">${p.title}</div>
-                    <div class="product-meta">
+                    <div class="product-bottom">
                         <div class="product-price"><span class="unit">¥</span>${Number(p.price).toLocaleString()}</div>
                         <div class="product-stats">
-                            <span>月销 ${formatSales(p.sales)}</span>
-                            <span>⭐ ${p.shop_rating?.toFixed(1) || '0'}</span>
+                            <span class="stat-item">🔥 ${formatSales(p.sales)}</span>
+                            <span class="stat-item">⭐ ${p.shop_rating?.toFixed(1) || '0'}</span>
                         </div>
                     </div>
                 </div>
@@ -260,10 +273,10 @@ function sortProducts() {
 }
 
 function renderStats(stats) {
-    document.getElementById('stat-total').textContent = (stats.total_products || 0) + ' 件';
+    document.getElementById('stat-total').textContent = (stats.total_products || 0);
     document.getElementById('stat-min').textContent = stats.min_price ? formatPrice(stats.min_price) : '¥0';
     document.getElementById('stat-avg').textContent = stats.avg_price ? formatPrice(stats.avg_price) : '¥0';
-    document.getElementById('stat-rec').textContent = (stats.recommended_count || 0) + ' 款';
+    document.getElementById('stat-rec').textContent = (stats.recommended_count || 0);
 }
 
 function renderPlatformChart(platformStats) {
@@ -279,7 +292,7 @@ function renderPlatformChart(platformStats) {
                 text: '暂无数据',
                 left: 'center',
                 top: 'center',
-                textStyle: { color: '#999', fontSize: 14, fontWeight: 'normal' }
+                textStyle: { color: 'rgba(255,255,255,0.4)', fontSize: 13, fontWeight: 'normal' }
             }
         });
         return;
@@ -292,11 +305,14 @@ function renderPlatformChart(platformStats) {
     platformChart.setOption({
         tooltip: {
             trigger: 'axis',
-            formatter: '{b}<br/>均价：¥{c}'
+            formatter: '{b}<br/>均价：¥{c}',
+            backgroundColor: 'rgba(15, 15, 26, 0.9)',
+            borderColor: 'rgba(255,255,255,0.1)',
+            textStyle: { color: '#fff' }
         },
         grid: {
-            left: '10%',
-            right: '10%',
+            left: '8%',
+            right: '8%',
             top: '15%',
             bottom: '10%',
         },
@@ -305,7 +321,7 @@ function renderPlatformChart(platformStats) {
             data: names,
             axisLine: { show: false },
             axisTick: { show: false },
-            axisLabel: { color: '#666', fontSize: 12 }
+            axisLabel: { color: 'rgba(255,255,255,0.5)', fontSize: 12 }
         },
         yAxis: {
             type: 'value',
@@ -318,19 +334,19 @@ function renderPlatformChart(platformStats) {
                 itemStyle: {
                     color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
                         { offset: 0, color: colors[i] },
-                        { offset: 1, color: colors[i] + '88' }
+                        { offset: 1, color: colors[i] + '55' }
                     ]),
-                    borderRadius: [6, 6, 0, 0]
+                    borderRadius: [8, 8, 0, 0]
                 }
             })),
-            barWidth: 40,
+            barWidth: 36,
             label: {
                 show: true,
                 position: 'top',
                 formatter: '¥{c}',
                 fontSize: 12,
                 fontWeight: 'bold',
-                color: '#333'
+                color: 'rgba(255,255,255,0.8)'
             }
         }]
     });
@@ -348,20 +364,20 @@ function renderTrendChart(trends) {
                 text: '暂无趋势数据',
                 left: 'center',
                 top: 'center',
-                textStyle: { color: '#999', fontSize: 14, fontWeight: 'normal' }
+                textStyle: { color: 'rgba(255,255,255,0.4)', fontSize: 13, fontWeight: 'normal' }
             }
         });
         return;
     }
 
     const series = trends.slice(0, 4).map((t, i) => {
-        const color = PLATFORM_COLORS[t.platform] || ['#1976d2', '#4caf50', '#ff9800', '#9c27b0'][i];
+        const color = PLATFORM_COLORS[t.platform] || ['#3b82f6', '#8b5cf6', '#f97316', '#ec4899'][i];
         return {
-            name: t.title.length > 15 ? t.title.slice(0, 15) + '...' : t.title,
+            name: t.title.length > 12 ? t.title.slice(0, 12) + '...' : t.title,
             type: 'line',
             smooth: true,
             symbol: 'circle',
-            symbolSize: 4,
+            symbolSize: 5,
             data: t.prices,
             itemStyle: { color },
             lineStyle: { width: 2, color },
@@ -379,10 +395,13 @@ function renderTrendChart(trends) {
     trendChart.setOption({
         tooltip: {
             trigger: 'axis',
+            backgroundColor: 'rgba(15, 15, 26, 0.9)',
+            borderColor: 'rgba(255,255,255,0.1)',
+            textStyle: { color: '#fff' }
         },
         legend: {
             bottom: 0,
-            textStyle: { fontSize: 11, color: '#666' },
+            textStyle: { fontSize: 11, color: 'rgba(255,255,255,0.5)' },
             itemWidth: 12,
             itemHeight: 8,
         },
@@ -398,14 +417,14 @@ function renderTrendChart(trends) {
             boundaryGap: false,
             axisLine: { show: false },
             axisTick: { show: false },
-            axisLabel: { color: '#999', fontSize: 10, interval: Math.floor(dates.length / 5) }
+            axisLabel: { color: 'rgba(255,255,255,0.3)', fontSize: 10, interval: Math.floor(dates.length / 5) }
         },
         yAxis: {
             type: 'value',
             axisLine: { show: false },
             axisTick: { show: false },
-            splitLine: { lineStyle: { color: '#f0f0f0' } },
-            axisLabel: { color: '#999', fontSize: 10, formatter: '¥{value}' }
+            splitLine: { lineStyle: { color: 'rgba(255,255,255,0.06)' } },
+            axisLabel: { color: 'rgba(255,255,255,0.3)', fontSize: 10, formatter: '¥{value}' }
         },
         series: series
     });

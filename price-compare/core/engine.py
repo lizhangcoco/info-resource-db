@@ -2,7 +2,6 @@ import threading
 from datetime import datetime
 from typing import List, Callable, Optional
 
-from collectors.mock_collector import get_all_collectors as get_mock_collectors, generate_history_price
 from collectors.real_collector import get_real_collectors
 from core.cleaner import clean_products
 from core.analyzer import full_analysis
@@ -18,6 +17,7 @@ class CollectEngine:
                progress_callback: Optional[Callable] = None) -> dict:
         record_id = database.create_search_record(keyword, platforms or [])
         all_products = []
+        errors = []
 
         real_collectors = get_real_collectors(platforms)
         for collector in real_collectors:
@@ -30,25 +30,14 @@ class CollectEngine:
                 if progress_callback:
                     progress_callback(collector.platform, "done", len(products))
             except Exception as e:
+                errors.append(f"{collector.name}: {str(e)}")
                 if progress_callback:
                     progress_callback(collector.platform, "error", 0)
 
         if not all_products:
-            if progress_callback:
-                progress_callback("system", "fallback", 0)
-            mock_collectors = get_mock_collectors(platforms)
-            for collector in mock_collectors:
-                try:
-                    if progress_callback:
-                        progress_callback(collector.platform, "collecting", 0)
-                    products = collector.search(keyword, limit)
-                    if products:
-                        all_products.extend(products)
-                    if progress_callback:
-                        progress_callback(collector.platform, "done", len(products))
-                except Exception:
-                    if progress_callback:
-                        progress_callback(collector.platform, "error", 0)
+            error_msg = "所有平台采集失败: " + "; ".join(errors) if errors else "未获取到任何商品数据"
+            database.update_search_record(record_id, product_count=0, status="failed", error_msg=error_msg)
+            raise Exception(error_msg)
 
         all_products = clean_products(all_products)
         database.batch_insert_products(all_products)
@@ -68,6 +57,7 @@ class CollectEngine:
 
         analysis = full_analysis(all_products)
         analysis["record_id"] = record_id
+        analysis["errors"] = errors
         return analysis
 
     def search_async(self, keyword: str, platforms: List[str] = None, limit: int = 20) -> int:
@@ -102,14 +92,26 @@ class CollectEngine:
             task = self._active_tasks[record_id]
             if task["status"] == "completed":
                 return task
+            if task["status"] == "failed":
+                return {
+                    "status": task["status"],
+                    "error": task.get("error", "采集失败"),
+                    "progress": task.get("progress", {}),
+                }
             return {
                 "status": task["status"],
                 "progress": task.get("progress", {}),
             }
 
-        record = database.get_search_records(limit=1)
+        record = database.get_search_records(limit=10)
         for r in record:
             if r.id == record_id:
+                if r.status == "failed":
+                    return {
+                        "status": r.status,
+                        "error": r.error_msg or "采集失败",
+                        "product_count": r.product_count,
+                    }
                 products = database.get_products_by_keyword(r.keyword)
                 return {
                     "status": r.status,

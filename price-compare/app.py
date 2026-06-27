@@ -10,26 +10,7 @@ from storage import database
 from core.engine import get_engine
 from core.analyzer import full_analysis, mark_recommendations
 from core.trend import get_keyword_trends, batch_trends_to_echarts
-from collectors import get_supported_platforms, get_collectors
-from collectors.mock_collector import generate_history_price
-from core.cleaner import clean_products
-
-
-def _init_demo_data():
-    if database.is_db_initialized():
-        return
-    demo_keywords = ["iPhone 15 Pro", "AirPods Pro 2", "戴森吹风机 HD15"]
-    collectors = get_collectors()
-    for keyword in demo_keywords:
-        all_products = []
-        for collector in collectors:
-            products = collector.search(keyword, limit=12)
-            all_products.extend(products)
-        all_products = clean_products(all_products)
-        database.batch_insert_products(all_products)
-        for p in all_products:
-            history = generate_history_price(p, days=30)
-            database.batch_insert_price_history(history)
+from collectors import get_supported_platforms
 
 
 def create_app():
@@ -39,7 +20,6 @@ def create_app():
     app.config["APPLICATION_ROOT"] = "/bijia"
 
     database.init_db()
-    _init_demo_data()
     engine = get_engine()
 
     @app.route("/")

@@ -167,10 +167,15 @@ function pollSearchStatus(recordId) {
                 const btn = document.getElementById('searchBtn');
                 btn.disabled = false;
                 btn.innerHTML = '<span>⚡</span> 开始比价';
+                const errorMsg = data.error || data.error_msg || '请检查网络连接后重试';
                 document.getElementById('productList').innerHTML = `
                     <div class="empty-state">
                         <div class="empty-icon">❌</div>
-                        <p>采集失败</p>
+                        <h3>采集失败</h3>
+                        <p class="error-detail">${errorMsg}</p>
+                        <p style="margin-top: 10px; font-size: 12px; opacity: 0.7;">
+                            提示：电商平台反爬机制可能导致部分数据获取失败，建议稍后重试
+                        </p>
                     </div>
                 `;
             } else if (count >= maxCount) {

@@ -66,6 +66,7 @@ def init_db():
                 platforms VARCHAR(100) DEFAULT '[]',
                 product_count INTEGER DEFAULT 0,
                 status VARCHAR(20) DEFAULT 'running',
+                error_msg TEXT DEFAULT NULL,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )
         """)
@@ -74,6 +75,11 @@ def init_db():
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_price_history_key ON price_history(product_key)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_price_history_keyword ON price_history(keyword)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_search_keyword ON search_records(keyword)")
+
+        try:
+            cursor.execute("ALTER TABLE search_records ADD COLUMN error_msg TEXT DEFAULT NULL")
+        except Exception:
+            pass
 
 
 def is_db_initialized() -> bool:
@@ -265,7 +271,7 @@ def create_search_record(keyword: str, platforms: List[str]) -> int:
         return cursor.lastrowid
 
 
-def update_search_record(record_id: int, product_count: int = None, status: str = None):
+def update_search_record(record_id: int, product_count: int = None, status: str = None, error_msg: str = None):
     with get_db() as conn:
         cursor = conn.cursor()
         updates = []
@@ -276,6 +282,9 @@ def update_search_record(record_id: int, product_count: int = None, status: str 
         if status:
             updates.append("status = ?")
             params.append(status)
+        if error_msg is not None:
+            updates.append("error_msg = ?")
+            params.append(error_msg)
         if not updates:
             return
         params.append(record_id)
@@ -302,6 +311,7 @@ def get_search_records(keyword: str = None, limit: int = 20) -> List[SearchRecor
             platforms=json.loads(row["platforms"]) if row["platforms"] else [],
             product_count=row["product_count"],
             status=row["status"],
+            error_msg=row["error_msg"] if "error_msg" in row.keys() else None,
             created_at=row["created_at"],
         ) for row in rows]
 

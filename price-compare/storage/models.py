@@ -58,6 +58,7 @@ class SearchRecord:
     product_count: int = 0
     status: str = "running"
     id: Optional[int] = None
+    error_msg: Optional[str] = None
     created_at: Optional[str] = None
 
     def to_dict(self):
@@ -67,6 +68,7 @@ class SearchRecord:
             "platforms": self.platforms,
             "product_count": self.product_count,
             "status": self.status,
+            "error_msg": self.error_msg,
             "created_at": self.created_at,
         }
 

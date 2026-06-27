@@ -113,10 +113,12 @@ class CollectEngine:
                         "product_count": r.product_count,
                     }
                 products = database.get_products_by_keyword(r.keyword)
+                stats = database.get_stats(r.keyword)
                 return {
                     "status": r.status,
                     "product_count": r.product_count,
                     "products": [p.to_dict() for p in products],
+                    "stats": stats.to_dict(),
                 }
         return {"status": "not_found"}
 

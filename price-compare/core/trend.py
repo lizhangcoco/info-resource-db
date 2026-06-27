@@ -48,15 +48,21 @@ def get_keyword_trends(keyword: str, days: int = 30, limit: int = 5) -> List[Tre
     trends = []
     for product in products:
         trend = get_product_trend(product.product_key, days)
-        if trend.points:
-            trends.append(trend)
+        # 即使没有历史数据，也添加商品（使用当前价格作为起点）
+        trends.append(trend)
 
     return trends
 
 
 def trend_to_echarts(trend: TrendData) -> Dict:
-    dates = [p.collected_at.split(" ")[0] for p in trend.points]
-    prices = [p.price for p in trend.points]
+    if trend.points:
+        dates = [p.collected_at.split(" ")[0] for p in trend.points]
+        prices = [p.price for p in trend.points]
+    else:
+        # 没有历史数据时，使用当前时间和价格作为单点
+        now = datetime.now().strftime("%Y-%m-%d")
+        dates = [now]
+        prices = [trend.current_price] if trend.current_price > 0 else [trend.min_price] if trend.min_price > 0 else [0]
 
     return {
         "product_key": trend.product_key,

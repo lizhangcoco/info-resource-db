@@ -2,10 +2,10 @@ import threading
 from datetime import datetime
 from typing import List, Callable, Optional
 
-from collectors import get_collectors
+from collectors.mock_collector import get_all_collectors as get_mock_collectors, generate_history_price
+from collectors.real_collector import get_real_collectors
 from core.cleaner import clean_products
 from core.analyzer import full_analysis
-from collectors.mock_collector import generate_history_price
 from storage import database
 from storage.models import Product, PricePoint
 
@@ -17,41 +17,38 @@ class CollectEngine:
     def search(self, keyword: str, platforms: List[str] = None, limit: int = 20,
                progress_callback: Optional[Callable] = None) -> dict:
         record_id = database.create_search_record(keyword, platforms or [])
-        collectors = get_collectors(platforms)
         all_products = []
-        total_platforms = len(collectors)
 
-        def _collect(collector):
+        real_collectors = get_real_collectors(platforms)
+        for collector in real_collectors:
             try:
+                if progress_callback:
+                    progress_callback(collector.platform, "collecting", 0)
                 products = collector.search(keyword, limit)
+                if products:
+                    all_products.extend(products)
                 if progress_callback:
                     progress_callback(collector.platform, "done", len(products))
-                return products
             except Exception as e:
                 if progress_callback:
                     progress_callback(collector.platform, "error", 0)
-                return []
 
-        if progress_callback:
-            for c in collectors:
-                progress_callback(c.platform, "collecting", 0)
-
-        threads = []
-        results = [[] for _ in collectors]
-
-        def _worker(idx, collector):
-            results[idx] = _collect(collector)
-
-        for i, collector in enumerate(collectors):
-            t = threading.Thread(target=_worker, args=(i, collector))
-            threads.append(t)
-            t.start()
-
-        for t in threads:
-            t.join()
-
-        for r in results:
-            all_products.extend(r)
+        if not all_products:
+            if progress_callback:
+                progress_callback("system", "fallback", 0)
+            mock_collectors = get_mock_collectors(platforms)
+            for collector in mock_collectors:
+                try:
+                    if progress_callback:
+                        progress_callback(collector.platform, "collecting", 0)
+                    products = collector.search(keyword, limit)
+                    if products:
+                        all_products.extend(products)
+                    if progress_callback:
+                        progress_callback(collector.platform, "done", len(products))
+                except Exception:
+                    if progress_callback:
+                        progress_callback(collector.platform, "error", 0)
 
         all_products = clean_products(all_products)
         database.batch_insert_products(all_products)

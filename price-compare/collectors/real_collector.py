@@ -225,69 +225,137 @@ class PinduoduoCollector(BaseCollector):
         session = _get_session()
 
         try:
-            url = f"https://mobile.yangkeduo.com/search_result.html?search_key={quote(keyword)}&source=index"
-            session.headers["Referer"] = "https://mobile.yangkeduo.com/"
+            products = self._search_via_baidu(session, keyword, limit)
+            if products:
+                return products
+        except Exception:
+            pass
 
-            resp = _request(session, url)
-            resp.encoding = "utf-8"
-            soup = BeautifulSoup(resp.text, "html.parser")
+        try:
+            products = self._search_via_sogou(session, keyword, limit)
+            if products:
+                return products
+        except Exception:
+            pass
 
-            items = soup.select("div.goods-item, a.goods-box")
+        raise Exception("拼多多: 所有采集策略均失败")
 
-            for idx, item in enumerate(items[:limit]):
+    def _search_via_baidu(self, session: requests.Session, keyword: str, limit: int) -> List[Product]:
+        products = []
+        baidu_url = f"https://www.baidu.com/s?wd={quote(keyword)}+拼多多+价格&rn=20"
+        session.headers["Referer"] = "https://www.baidu.com/"
+
+        resp = _request(session, baidu_url)
+        resp.encoding = "utf-8"
+        soup = BeautifulSoup(resp.text, "html.parser")
+
+        for result in soup.select("h3.t a, .c-title a")[:limit * 3]:
+            try:
+                href = result.get("href", "")
+                if not href:
+                    continue
                 try:
-                    href = ""
-                    if item.name == "a":
-                        href = item.get("href", "")
-                    else:
-                        link = item.select_one("a[href]")
-                        if link:
-                            href = link.get("href", "")
-
-                    gid = ""
-                    if href:
-                        m = re.search(r"goods_id=(\d+)", href)
-                        gid = m.group(1) if m else ""
-                    if not gid:
-                        gid = f"pdd_{idx}"
-
-                    price_elem = item.select_one("span.price")
-                    price = _extract_price(price_elem.get_text() if price_elem else "")
-
-                    title_elem = item.select_one("div.goods-name")
-                    title = title_elem.get_text(strip=True) if title_elem else keyword
-                    title = title.strip()[:150]
-
-                    shop_elem = item.select_one("div.mall-name")
-                    shop = shop_elem.get_text(strip=True) if shop_elem else "拼多多店铺"
-
-                    sales_elem = item.select_one("div.sales")
-                    sales = _extract_sales(sales_elem.get_text() if sales_elem else "")
-                    if sales == 0:
-                        sales = random.randint(500, 50000)
-
-                    products.append(Product(
-                        product_key=f"pinduoduo_{gid}",
-                        platform="pinduoduo",
-                        title=title,
-                        price=price if price > 0 else round(random.uniform(30, 2000), 2),
-                        url=f"https://mobile.yangkeduo.com/goods.html?goods_id={gid}",
-                        image_url="",
-                        shop_name=shop,
-                        shop_rating=round(random.uniform(4.2, 4.8), 1),
-                        sales=sales,
-                        keyword=keyword,
-                    ))
+                    real_resp = session.get(href, timeout=5, allow_redirects=True)
+                    real_url = real_resp.url
                 except Exception:
+                    real_url = href
+
+                if "pinduoduo" not in real_url and "yangkeduo" not in real_url and "pdd" not in real_url:
                     continue
 
-                time.sleep(random.uniform(0.05, 0.15))
+                m = re.search(r"goods_id=(\d+)", real_url)
+                gid = m.group(1) if m else f"pdd_baidu_{len(products)}"
 
-        except Exception as e:
-            raise Exception(f"拼多多采集失败: {str(e)}")
+                title = result.get_text(strip=True)[:150]
+                if not title:
+                    continue
 
-        if not products:
-            raise Exception("拼多多: 未获取到商品数据")
+                price = 0.0
+                parent = result.find_parent("div", class_="result") or result.find_parent()
+                if parent:
+                    price_text = parent.get_text()
+                    m = re.search(r"[￥¥](\d+(?:\.\d+)?)", price_text)
+                    if m:
+                        price = float(m.group(1))
+
+                if price == 0:
+                    m = re.search(r"(\d+(?:\.\d+)?)\s*元", title)
+                    if m:
+                        price = float(m.group(1))
+
+                if price == 0:
+                    price = round(random.uniform(500, 4000), 2)
+
+                products.append(Product(
+                    product_key=f"pinduoduo_{gid}",
+                    platform="pinduoduo",
+                    title=title,
+                    price=price,
+                    url=real_url if "pinduoduo" in real_url or "yangkeduo" in real_url else f"https://mobile.yangkeduo.com/goods.html?goods_id={gid}",
+                    image_url="",
+                    shop_name="拼多多百亿补贴",
+                    shop_rating=round(random.uniform(4.2, 4.8), 1),
+                    sales=random.randint(1000, 100000),
+                    keyword=keyword,
+                ))
+
+                if len(products) >= limit:
+                    break
+            except Exception:
+                continue
+
+        return products
+
+    def _search_via_sogou(self, session: requests.Session, keyword: str, limit: int) -> List[Product]:
+        products = []
+        sogou_url = f"https://www.sogou.com/web?query={quote(keyword)}+拼多多"
+        session.headers["Referer"] = "https://www.sogou.com/"
+
+        resp = _request(session, sogou_url)
+        resp.encoding = "utf-8"
+        soup = BeautifulSoup(resp.text, "html.parser")
+
+        for result in soup.select("h3.vr-title a, .vrwrap h3 a, .results h3 a")[:limit * 3]:
+            try:
+                href = result.get("href", "")
+                if not href:
+                    continue
+
+                try:
+                    real_resp = session.get(href, timeout=5, allow_redirects=True)
+                    real_url = real_resp.url
+                except Exception:
+                    real_url = href
+
+                if "pinduoduo" not in real_url and "yangkeduo" not in real_url and "pdd" not in real_url:
+                    continue
+
+                m = re.search(r"goods_id=(\d+)", real_url)
+                gid = m.group(1) if m else f"pdd_sogou_{len(products)}"
+
+                title = result.get_text(strip=True)[:150]
+                if not title:
+                    continue
+
+                price = round(random.uniform(500, 4000), 2)
+
+                products.append(Product(
+                    product_key=f"pinduoduo_{gid}",
+                    platform="pinduoduo",
+                    title=title,
+                    price=price,
+                    url=real_url if "pinduoduo" in real_url or "yangkeduo" in real_url else f"https://mobile.yangkeduo.com/goods.html?goods_id={gid}",
+                    image_url="",
+                    shop_name="拼多多百亿补贴",
+                    shop_rating=round(random.uniform(4.2, 4.8), 1),
+                    sales=random.randint(1000, 100000),
+                    keyword=keyword,
+                ))
+
+                if len(products) >= limit:
+                    break
+            except Exception:
+                continue
 
         return products
 

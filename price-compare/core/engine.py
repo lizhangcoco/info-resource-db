@@ -91,7 +91,15 @@ class CollectEngine:
         if record_id in self._active_tasks:
             task = self._active_tasks[record_id]
             if task["status"] == "completed":
-                return task
+                # 返回 result 而不是整个 task，确保 products 和 stats 在根级别
+                result = task.get("result", {})
+                return {
+                    "status": "completed",
+                    "product_count": len(result.get("products", [])),
+                    "products": result.get("products", []),
+                    "stats": result.get("stats", {}),
+                    "errors": result.get("errors", []),
+                }
             if task["status"] == "failed":
                 return {
                     "status": task["status"],

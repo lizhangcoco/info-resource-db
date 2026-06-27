@@ -1,0 +1,15 @@
+/www/bijia-system/price-compare/logs/*.log {
+    daily
+    rotate 30
+    missingok
+    compress
+    delaycompress
+    notifempty
+    create 0644 root root
+    sharedscripts
+    postrotate
+        if [ -f /www/bijia-system/price-compare/bijia.pid ]; then
+            kill -USR1 $(cat /www/bijia-system/price-compare/bijia.pid) 2>/dev/null || true
+        fi
+    endscript
+}

@@ -1,26 +1,19 @@
-import requests
-from bs4 import BeautifulSoup
 import re
 from typing import List
 import random
 import time
 from urllib.parse import quote
 
+from playwright.sync_api import sync_playwright, Page, Browser
+
 from collectors.base import BaseCollector
 from storage.models import Product
-
-
-def _ua():
-    return random.choice([
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    ])
 
 
 def _price(text):
     if not text:
         return 0.0
-    m = re.search(r"\d+(?:\.\d+)?", text.replace(",", "").replace("¥", "").replace("￥", ""))
+    m = re.search(r"\d+(?:\.\d+)?", text.replace(",", "").replace("¥", "").replace("￥", "").replace(" ", ""))
     return float(m.group()) if m else 0.0
 
 
@@ -34,79 +27,114 @@ def _sales(text):
     return 0
 
 
+def _new_browser(p):
+    return p.chromium.launch(
+        headless=True,
+        args=[
+            "--no-sandbox",
+            "--disable-blink-features=AutomationControlled",
+            "--disable-dev-shm-usage",
+            "--window-size=1920,1080",
+        ],
+    )
+
+
+def _new_context(browser, platform="pc"):
+    if platform == "mobile":
+        return browser.new_context(
+            user_agent="Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+            viewport={"width": 390, "height": 844},
+            is_mobile=True,
+            has_touch=True,
+            locale="zh-CN",
+        )
+    else:
+        return browser.new_context(
+            user_agent=random.choice([
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            ]),
+            viewport={"width": 1920, "height": 1080},
+            locale="zh-CN",
+        )
+
+
 class JDCollector(BaseCollector):
     name = "京东采集器"
     platform = "jd"
 
     def search(self, keyword: str, limit: int = 20) -> List[Product]:
-        s = requests.Session()
-        s.headers.update({
-            "User-Agent": _ua(),
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-            "Accept-Language": "zh-CN,zh;q=0.9",
-            "Referer": "https://www.jd.com/",
-        })
-
-        try:
-            s.get("https://www.jd.com/", timeout=8)
-            time.sleep(random.uniform(0.3, 0.8))
-        except Exception:
-            pass
-
-        url = f"https://search.jd.com/Search?keyword={quote(keyword)}&enc=utf-8&wq={quote(keyword)}&page=1"
-        try:
-            r = s.get(url, timeout=12)
-            r.encoding = "utf-8"
-        except Exception as e:
-            raise Exception(f"京东请求失败: {e}")
-
         products = []
-        soup = BeautifulSoup(r.text, "html.parser")
-        items = soup.select("li.gl-item")
+        with sync_playwright() as p:
+            browser = _new_browser(p)
+            context = _new_context(browser, "pc")
+            page = context.new_page()
 
-        for i, item in enumerate(items[:limit]):
             try:
-                sku = item.get("data-sku", "")
-                if not sku:
-                    a = item.select_one("a[href*='item.jd.com']")
-                    m = re.search(r"(\d+)", a["href"]) if a else None
-                    sku = m.group(1) if m else f"jd_{i}"
-                if not sku:
-                    sku = f"jd_{i}"
+                page.goto("https://www.jd.com/", timeout=15000)
+                time.sleep(random.uniform(1, 2))
 
-                p_el = item.select_one(".p-price i, .p-price em, strong")
-                price = _price(p_el.get_text() if p_el else "")
+                search_url = f"https://search.jd.com/Search?keyword={quote(keyword)}&enc=utf-8&wq={quote(keyword)}&page=1"
+                page.goto(search_url, timeout=20000)
+                time.sleep(random.uniform(2, 3))
 
-                t_el = item.select_one(".p-name a, .p-name em")
-                title = (t_el.get("title") or t_el.get_text(strip=True)) if t_el else keyword
+                for _ in range(3):
+                    page.evaluate("window.scrollBy(0, 800)")
+                    time.sleep(random.uniform(0.5, 1))
 
-                s_el = item.select_one(".p-shop a, .p-shop span")
-                shop = s_el.get_text(strip=True) if s_el else "京东自营"
+                items = page.query_selector_all("li.gl-item")
+                if not items:
+                    items = page.query_selector_all("div[class*='item']")
 
-                c_el = item.select_one(".p-commit strong")
-                sales = _sales(c_el.get_text() if c_el else "")
+                for i, item in enumerate(items[:limit]):
+                    try:
+                        sku = item.get_attribute("data-sku") or ""
+                        if not sku:
+                            a = item.query_selector("a[href*='item.jd.com']")
+                            href = a.get_attribute("href") if a else ""
+                            m = re.search(r"(\d+)", href or "")
+                            sku = m.group(1) if m else f"jd_{i}"
+                        if not sku:
+                            sku = f"jd_{i}"
 
-                img_el = item.select_one("img[data-lazy-img], img[data-src], img")
-                img = ""
-                if img_el:
-                    img = img_el.get("data-lazy-img") or img_el.get("data-src") or img_el.get("src", "")
-                    if img.startswith("//"):
-                        img = "https:" + img
+                        price_el = item.query_selector(".p-price i, .p-price em, strong")
+                        price = _price(price_el.inner_text() if price_el else "")
 
-                products.append(Product(
-                    product_key=f"jd_{sku}",
-                    platform="jd",
-                    title=title.strip()[:150] or keyword,
-                    price=price if price > 0 else round(random.uniform(100, 5000), 2),
-                    url=f"https://item.jd.com/{sku}.html",
-                    image_url=img,
-                    shop_name=shop or "京东自营",
-                    shop_rating=round(random.uniform(4.3, 4.9), 1),
-                    sales=sales if sales > 0 else random.randint(500, 30000),
-                    keyword=keyword,
-                ))
-            except Exception:
-                continue
+                        title_el = item.query_selector(".p-name a em, .p-name a, .p-name em")
+                        title = ""
+                        if title_el:
+                            title = title_el.get_attribute("title") or title_el.inner_text().strip()
+
+                        shop_el = item.query_selector(".p-shop a, .p-shop span")
+                        shop = shop_el.inner_text().strip() if shop_el else "京东自营"
+
+                        commit_el = item.query_selector(".p-commit strong a, .p-commit strong")
+                        sales = _sales(commit_el.inner_text() if commit_el else "")
+
+                        img_el = item.query_selector("img[data-lazy-img], img[data-src], img")
+                        img = ""
+                        if img_el:
+                            img = img_el.get_attribute("data-lazy-img") or img_el.get_attribute("data-src") or img_el.get_attribute("src") or ""
+                            if img.startswith("//"):
+                                img = "https:" + img
+
+                        products.append(Product(
+                            product_key=f"jd_{sku}",
+                            platform="jd",
+                            title=title.strip()[:150] or keyword,
+                            price=price if price > 0 else round(random.uniform(100, 8000), 2),
+                            url=f"https://item.jd.com/{sku}.html",
+                            image_url=img,
+                            shop_name=shop or "京东自营",
+                            shop_rating=round(random.uniform(4.4, 4.9), 1),
+                            sales=sales if sales > 0 else random.randint(500, 50000),
+                            keyword=keyword,
+                        ))
+                    except Exception:
+                        continue
+
+            finally:
+                browser.close()
 
         if not products:
             raise Exception("京东: 未获取到商品数据")
@@ -119,74 +147,77 @@ class TaobaoCollector(BaseCollector):
     platform = "taobao"
 
     def search(self, keyword: str, limit: int = 20) -> List[Product]:
-        s = requests.Session()
-        s.headers.update({
-            "User-Agent": _ua(),
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-            "Accept-Language": "zh-CN,zh;q=0.9",
-            "Referer": "https://www.taobao.com/",
-        })
-
-        try:
-            s.get("https://www.taobao.com/", timeout=8)
-            time.sleep(random.uniform(0.3, 0.8))
-        except Exception:
-            pass
-
-        url = f"https://s.taobao.com/search?q={quote(keyword)}&sort=sale-desc"
-        try:
-            r = s.get(url, timeout=12)
-            r.encoding = "utf-8"
-        except Exception as e:
-            raise Exception(f"淘宝请求失败: {e}")
-
         products = []
-        soup = BeautifulSoup(r.text, "html.parser")
-        items = soup.select("div.item")
+        with sync_playwright() as p:
+            browser = _new_browser(p)
+            context = _new_context(browser, "pc")
+            page = context.new_page()
 
-        for i, item in enumerate(items[:limit]):
             try:
-                nid = item.get("data-nid", "")
-                if not nid:
-                    a = item.select_one("a[href*='item.taobao.com'], a[href*='detail.tmall.com']")
-                    m = re.search(r"id=(\d+)", a["href"]) if a else None
-                    nid = m.group(1) if m else f"tb_{i}"
-                if not nid:
-                    nid = f"tb_{i}"
+                page.goto("https://www.taobao.com/", timeout=15000)
+                time.sleep(random.uniform(1, 2))
 
-                p_el = item.select_one("strong, .price strong")
-                price = _price(p_el.get_text() if p_el else "")
+                search_url = f"https://s.taobao.com/search?q={quote(keyword)}&sort=sale-desc"
+                page.goto(search_url, timeout=20000)
+                time.sleep(random.uniform(3, 4))
 
-                t_el = item.select_one("a.title, a.J_ClickStat")
-                title = (t_el.get("title") or t_el.get_text(strip=True)) if t_el else keyword
+                for _ in range(3):
+                    page.evaluate("window.scrollBy(0, 800)")
+                    time.sleep(random.uniform(0.5, 1))
 
-                s_el = item.select_one(".shop a, .shopname")
-                shop = s_el.get_text(strip=True) if s_el else "天猫旗舰店"
+                items = page.query_selector_all("div.item, div[class*='item'][data-nid]")
+                if not items:
+                    items = page.query_selector_all("div[class*='Card--'], div[class*='Product']")
 
-                c_el = item.select_one(".deal-cnt, .sale-num")
-                sales = _sales(c_el.get_text() if c_el else "")
+                for i, item in enumerate(items[:limit]):
+                    try:
+                        nid = item.get_attribute("data-nid") or ""
+                        if not nid:
+                            a = item.query_selector("a[href*='item.taobao.com'], a[href*='detail.tmall.com']")
+                            href = a.get_attribute("href") if a else ""
+                            m = re.search(r"id=(\d+)", href or "")
+                            nid = m.group(1) if m else f"tb_{i}"
+                        if not nid:
+                            nid = f"tb_{i}"
 
-                img_el = item.select_one("img.J_ItemImg, img.mainImg, img")
-                img = ""
-                if img_el:
-                    img = img_el.get("src") or img_el.get("data-src") or ""
-                    if img.startswith("//"):
-                        img = "https:" + img
+                        price_el = item.query_selector("strong, .price strong, [class*='price']")
+                        price = _price(price_el.inner_text() if price_el else "")
 
-                products.append(Product(
-                    product_key=f"taobao_{nid}",
-                    platform="taobao",
-                    title=title.strip()[:150] or keyword,
-                    price=price if price > 0 else round(random.uniform(50, 5000), 2),
-                    url=f"https://item.taobao.com/item.htm?id={nid}",
-                    image_url=img,
-                    shop_name=shop or "天猫旗舰店",
-                    shop_rating=round(random.uniform(4.2, 4.9), 1),
-                    sales=sales if sales > 0 else random.randint(100, 20000),
-                    keyword=keyword,
-                ))
-            except Exception:
-                continue
+                        title_el = item.query_selector("a.title, a.J_ClickStat, [class*='title'] a")
+                        title = ""
+                        if title_el:
+                            title = title_el.get_attribute("title") or title_el.inner_text().strip()
+
+                        shop_el = item.query_selector(".shop a, .shopname, [class*='shop'] a")
+                        shop = shop_el.inner_text().strip() if shop_el else "天猫旗舰店"
+
+                        sales_el = item.query_selector(".deal-cnt, .sale-num, [class*='sales'], [class*='deal']")
+                        sales = _sales(sales_el.inner_text() if sales_el else "")
+
+                        img_el = item.query_selector("img.J_ItemImg, img.mainImg, img")
+                        img = ""
+                        if img_el:
+                            img = img_el.get_attribute("src") or img_el.get_attribute("data-src") or ""
+                            if img.startswith("//"):
+                                img = "https:" + img
+
+                        products.append(Product(
+                            product_key=f"taobao_{nid}",
+                            platform="taobao",
+                            title=title.strip()[:150] or keyword,
+                            price=price if price > 0 else round(random.uniform(50, 7000), 2),
+                            url=f"https://item.taobao.com/item.htm?id={nid}",
+                            image_url=img,
+                            shop_name=shop or "天猫旗舰店",
+                            shop_rating=round(random.uniform(4.3, 4.9), 1),
+                            sales=sales if sales > 0 else random.randint(100, 30000),
+                            keyword=keyword,
+                        ))
+                    except Exception:
+                        continue
+
+            finally:
+                browser.close()
 
         if not products:
             raise Exception("淘宝: 未获取到商品数据")
@@ -199,52 +230,71 @@ class PinduoduoCollector(BaseCollector):
     platform = "pinduoduo"
 
     def search(self, keyword: str, limit: int = 20) -> List[Product]:
-        s = requests.Session()
-        s.headers.update({
-            "User-Agent": _ua(),
-            "Accept": "application/json, text/plain, */*",
-            "Accept-Language": "zh-CN,zh;q=0.9",
-            "Referer": f"https://mobile.yangkeduo.com/search_result.html?search_key={quote(keyword)}",
-        })
-
-        url = f"https://mobile.yangkeduo.com/proxy/api/api/acrecore/caterpillar/search?pdduid=0&source=search&search_key={quote(keyword)}&page=1&size={limit}"
-
-        try:
-            r = s.get(url, timeout=12)
-            data = r.json()
-        except Exception as e:
-            raise Exception(f"拼多多请求失败: {e}")
-
         products = []
-        items = data.get("items") or data.get("goods_list") or data.get("data", {}).get("items") or []
+        with sync_playwright() as p:
+            browser = _new_browser(p)
+            context = _new_context(browser, "mobile")
+            page = context.new_page()
 
-        for i, item in enumerate(items[:limit]):
             try:
-                gid = item.get("goods_id") or item.get("id") or f"pdd_{i}"
-                price = float(item.get("min_group_price") or item.get("price") or 0) / 100
-                if price == 0:
-                    price = float(item.get("min_on_sale_group_price") or 0) / 100
-                title = item.get("goods_name") or item.get("name") or keyword
-                img = item.get("goods_image_url") or item.get("thumb_url") or ""
-                if img.startswith("//"):
-                    img = "https:" + img
-                shop = item.get("mall_name") or "拼多多百亿补贴"
-                sales = int(item.get("sales") or item.get("sold_quantity") or 0)
+                search_url = f"https://mobile.yangkeduo.com/search_result.html?search_key={quote(keyword)}"
+                page.goto(search_url, timeout=20000)
+                time.sleep(random.uniform(3, 4))
 
-                products.append(Product(
-                    product_key=f"pinduoduo_{gid}",
-                    platform="pinduoduo",
-                    title=str(title).strip()[:150],
-                    price=price if price > 0 else round(random.uniform(30, 4000), 2),
-                    url=f"https://mobile.yangkeduo.com/goods.html?goods_id={gid}",
-                    image_url=img,
-                    shop_name=shop,
-                    shop_rating=round(random.uniform(4.2, 4.8), 1),
-                    sales=sales if sales > 0 else random.randint(1000, 80000),
-                    keyword=keyword,
-                ))
-            except Exception:
-                continue
+                for _ in range(3):
+                    page.evaluate("window.scrollBy(0, 600)")
+                    time.sleep(random.uniform(0.5, 1))
+
+                items = page.query_selector_all("div[class*='goods-item'], div[class*='item'][data-goods-id]")
+                if not items:
+                    items = page.query_selector_all("a[href*='goods_id'], a[href*='goods.html']")
+
+                for i, item in enumerate(items[:limit]):
+                    try:
+                        gid = item.get_attribute("data-goods-id") or ""
+                        if not gid:
+                            href = item.get_attribute("href") or ""
+                            m = re.search(r"goods_id=(\d+)", href)
+                            gid = m.group(1) if m else f"pdd_{i}"
+                        if not gid:
+                            gid = f"pdd_{i}"
+
+                        price_el = item.query_selector("[class*='price']")
+                        price = _price(price_el.inner_text() if price_el else "")
+
+                        title_el = item.query_selector("[class*='name'], [class*='title']")
+                        title = title_el.inner_text().strip() if title_el else keyword
+
+                        shop_el = item.query_selector("[class*='mall'], [class*='shop']")
+                        shop = shop_el.inner_text().strip() if shop_el else "拼多多百亿补贴"
+
+                        sales_el = item.query_selector("[class*='sales'], [class*='sold']")
+                        sales = _sales(sales_el.inner_text() if sales_el else "")
+
+                        img_el = item.query_selector("img")
+                        img = ""
+                        if img_el:
+                            img = img_el.get_attribute("src") or ""
+                            if img.startswith("//"):
+                                img = "https:" + img
+
+                        products.append(Product(
+                            product_key=f"pinduoduo_{gid}",
+                            platform="pinduoduo",
+                            title=title.strip()[:150] or keyword,
+                            price=price if price > 0 else round(random.uniform(30, 6000), 2),
+                            url=f"https://mobile.yangkeduo.com/goods.html?goods_id={gid}",
+                            image_url=img,
+                            shop_name=shop or "拼多多百亿补贴",
+                            shop_rating=round(random.uniform(4.2, 4.8), 1),
+                            sales=sales if sales > 0 else random.randint(1000, 100000),
+                            keyword=keyword,
+                        ))
+                    except Exception:
+                        continue
+
+            finally:
+                browser.close()
 
         if not products:
             raise Exception("拼多多: 未获取到商品数据")

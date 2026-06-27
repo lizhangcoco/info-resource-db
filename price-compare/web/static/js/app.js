@@ -3,6 +3,7 @@ let currentKeyword = '';
 let platformChart = null;
 let trendChart = null;
 let searchPollingTimer = null;
+const API_BASE = window.location.pathname.split('/bijia')[0] + '/bijia';
 
 const PLATFORM_NAMES = {
     jd: '京东',
@@ -101,7 +102,7 @@ async function doSearch() {
     clearInterval(searchPollingTimer);
 
     try {
-        const res = await fetch('/api/search', {
+        const res = await fetch(API_BASE + '/api/search', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ keyword, platforms, limit: 15 })
@@ -133,7 +134,7 @@ function pollSearchStatus(recordId) {
     searchPollingTimer = setInterval(async () => {
         count++;
         try {
-            const res = await fetch(`/api/search/${recordId}`);
+            const res = await fetch(API_BASE + `/api/search/${recordId}`);
             const data = await res.json();
 
             if (data.status === 'completed' || data.products) {
@@ -173,7 +174,7 @@ function pollSearchStatus(recordId) {
 
 async function loadExistingData(keyword) {
     try {
-        const res = await fetch(`/api/products?keyword=${encodeURIComponent(keyword)}&order_by=price&sort=asc&limit=50`);
+        const res = await fetch(API_BASE + `/api/products?keyword=${encodeURIComponent(keyword)}&order_by=price&sort=asc&limit=50`);
         const data = await res.json();
         if (data.products && data.products.length > 0) {
             currentProducts = data.products;
@@ -191,7 +192,7 @@ async function loadExistingData(keyword) {
 async function loadTrendData() {
     if (!currentKeyword) return;
     try {
-        const res = await fetch(`/api/trends?keyword=${encodeURIComponent(currentKeyword)}&days=30&limit=5`);
+        const res = await fetch(API_BASE + `/api/trends?keyword=${encodeURIComponent(currentKeyword)}&days=30&limit=5`);
         const data = await res.json();
         renderTrendChart(data.trends || []);
     } catch (e) {
@@ -412,7 +413,7 @@ function renderTrendChart(trends) {
 
 async function initDemo() {
     try {
-        const res = await fetch('/api/keywords');
+        const res = await fetch(API_BASE + '/api/keywords');
         const data = await res.json();
         if (data.keywords && data.keywords.length > 0) {
             const firstKw = data.keywords[0];

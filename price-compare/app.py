@@ -36,6 +36,7 @@ def create_app():
     app = Flask(__name__,
                 template_folder=os.path.join(os.path.dirname(__file__), "web", "templates"),
                 static_folder=os.path.join(os.path.dirname(__file__), "web", "static"))
+    app.config["APPLICATION_ROOT"] = "/bijia"
 
     database.init_db()
     _init_demo_data()

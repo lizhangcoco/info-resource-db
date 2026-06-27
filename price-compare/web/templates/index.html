@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>电商比价系统 - 多平台价格实时对比</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="/bijia/static/css/style.css">
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
 </head>
 <body>
@@ -158,9 +158,9 @@
     </div>
 
     <script>
-        window.API_BASE = "{{ url_for('static', filename='').replace('/static/', '/api/').replace('/static', '/api') }}";
-        window.APP_ROOT = "{{ request.script_root or '' }}";
+        window.API_BASE = '/bijia';
+        window.APP_ROOT = '/bijia';
     </script>
-    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script src="/bijia/static/js/app.js"></script>
 </body>
 </html>

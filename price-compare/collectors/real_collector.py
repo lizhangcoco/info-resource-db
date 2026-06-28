@@ -71,16 +71,18 @@ class JDCollector(BaseCollector):
             page = context.new_page()
 
             try:
-                page.goto("https://www.jd.com/", timeout=15000)
-                time.sleep(random.uniform(1, 2))
+                page.goto("https://www.jd.com/", timeout=10000, wait_until="domcontentloaded")
+                time.sleep(random.uniform(0.3, 0.6))
 
                 search_url = f"https://search.jd.com/Search?keyword={quote(keyword)}&enc=utf-8&wq={quote(keyword)}&page=1"
-                page.goto(search_url, timeout=20000)
-                time.sleep(random.uniform(2, 3))
+                page.goto(search_url, timeout=15000, wait_until="domcontentloaded")
+                time.sleep(random.uniform(0.5, 1))
 
-                for _ in range(3):
-                    page.evaluate("window.scrollBy(0, 800)")
-                    time.sleep(random.uniform(0.5, 1))
+                # 快速滚动加载
+                page.evaluate("window.scrollBy(0, 500)")
+                time.sleep(0.3)
+                page.evaluate("window.scrollBy(0, 500)")
+                time.sleep(0.3)
 
                 items = page.query_selector_all("li.gl-item")
                 if not items:
@@ -154,16 +156,18 @@ class TaobaoCollector(BaseCollector):
             page = context.new_page()
 
             try:
-                page.goto("https://www.taobao.com/", timeout=15000)
-                time.sleep(random.uniform(1, 2))
+                page.goto("https://www.taobao.com/", timeout=10000, wait_until="domcontentloaded")
+                time.sleep(random.uniform(0.3, 0.6))
 
                 search_url = f"https://s.taobao.com/search?q={quote(keyword)}&sort=sale-desc"
-                page.goto(search_url, timeout=20000)
-                time.sleep(random.uniform(3, 4))
+                page.goto(search_url, timeout=15000, wait_until="domcontentloaded")
+                time.sleep(random.uniform(1, 1.5))
 
-                for _ in range(3):
-                    page.evaluate("window.scrollBy(0, 800)")
-                    time.sleep(random.uniform(0.5, 1))
+                # 快速滚动
+                page.evaluate("window.scrollBy(0, 500)")
+                time.sleep(0.3)
+                page.evaluate("window.scrollBy(0, 500)")
+                time.sleep(0.3)
 
                 items = page.query_selector_all("div.item, div[class*='item'][data-nid]")
                 if not items:

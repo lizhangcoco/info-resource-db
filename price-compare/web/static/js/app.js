@@ -21,13 +21,15 @@ const API_BASE = getApiBase();
 const PLATFORM_NAMES = {
     jd: '京东',
     taobao: '淘宝',
-    pinduoduo: '拼多多'
+    pinduoduo: '拼多多',
+    custom: '自定义'
 };
 
 const PLATFORM_COLORS = {
     jd: '#e1251b',
     taobao: '#ff5000',
-    pinduoduo: '#e02e24'
+    pinduoduo: '#e02e24',
+    custom: '#10b981'
 };
 
 const PRODUCT_ICONS = {
@@ -142,13 +144,23 @@ async function doSearch() {
 
 function pollSearchStatus(recordId) {
     let count = 0;
-    const maxCount = 60;
+    const maxCount = 120; // 增加最大轮询次数
 
     searchPollingTimer = setInterval(async () => {
         count++;
         try {
             const res = await fetch(API_BASE + `/api/search/${recordId}`);
             const data = await res.json();
+
+            // 更新按钮文字显示进度
+            if (data.progress) {
+                const platforms = Object.keys(data.progress);
+                const completed = platforms.filter(p => data.progress[p].status === 'done').length;
+                const total = platforms.length;
+                if (completed < total) {
+                    document.getElementById('searchBtn').innerHTML = '<span>⏳</span> 采集中 ' + completed + '/' + total + '...';
+                }
+            }
 
             if (data.status === 'completed' || data.products) {
                 clearInterval(searchPollingTimer);
@@ -188,7 +200,7 @@ function pollSearchStatus(recordId) {
         } catch (e) {
             console.error(e);
         }
-    }, 500);
+    }, 300); // 缩短轮询间隔到300ms
 }
 
 async function loadExistingData(keyword) {
@@ -540,6 +552,99 @@ function renderTrendChartFromProducts(products) {
         series: series
     });
 }
+
+// ========== 数据上传功能 ==========
+
+function showUploadModal() {
+    document.getElementById('uploadModal').style.display = 'flex';
+    document.getElementById('uploadResult').innerHTML = '';
+}
+
+function closeUploadModal() {
+    document.getElementById('uploadModal').style.display = 'none';
+}
+
+async function loadUploadTemplate() {
+    try {
+        const res = await fetch(API_BASE + '/api/upload/template');
+        const template = await res.json();
+        document.getElementById('uploadKeyword').value = template.keyword;
+        document.getElementById('uploadData').value = JSON.stringify(template.products, null, 2);
+    } catch (e) {
+        document.getElementById('uploadResult').innerHTML = '<div class="error">加载模板失败</div>';
+    }
+}
+
+async function submitUploadData() {
+    const keyword = document.getElementById('uploadKeyword').value.trim();
+    const dataStr = document.getElementById('uploadData').value.trim();
+
+    if (!keyword) {
+        document.getElementById('uploadResult').innerHTML = '<div class="error">请输入关键词</div>';
+        return;
+    }
+
+    if (!dataStr) {
+        document.getElementById('uploadResult').innerHTML = '<div class="error">请输入商品数据</div>';
+        return;
+    }
+
+    let products;
+    try {
+        products = JSON.parse(dataStr);
+    } catch (e) {
+        document.getElementById('uploadResult').innerHTML = '<div class="error">JSON格式错误</div>';
+        return;
+    }
+
+    if (!Array.isArray(products)) {
+        document.getElementById('uploadResult').innerHTML = '<div class="error">数据必须是商品数组</div>';
+        return;
+    }
+
+    document.getElementById('uploadResult').innerHTML = '<div class="loading">正在导入数据...</div>';
+
+    try {
+        const res = await fetch(API_BASE + '/api/upload', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ keyword, products })
+        });
+
+        const data = await res.json();
+
+        if (data.error) {
+            document.getElementById('uploadResult').innerHTML = '<div class="error">导入失败: ' + data.error + '</div>';
+            return;
+        }
+
+        document.getElementById('uploadResult').innerHTML = '<div class="success">✅ 成功导入 ' + data.count + ' 件商品！</div>';
+
+        // 显示导入的数据
+        if (data.products) {
+            currentProducts = data.products;
+            currentKeyword = keyword;
+            document.getElementById('keywordInput').value = keyword;
+            renderProducts(data.products);
+            renderStats(data.stats || {});
+            renderPlatformChart(data.stats?.platform_stats || {});
+            renderTrendChartFromProducts(data.products);
+
+            // 3秒后关闭弹窗
+            setTimeout(closeUploadModal, 2000);
+        }
+    } catch (e) {
+        document.getElementById('uploadResult').innerHTML = '<div class="error">请求失败: ' + e.message + '</div>';
+    }
+}
+
+// 点击弹窗外部关闭
+document.addEventListener('click', function(e) {
+    const modal = document.getElementById('uploadModal');
+    if (e.target === modal) {
+        closeUploadModal();
+    }
+});
 
 async function initDemo() {
     try {

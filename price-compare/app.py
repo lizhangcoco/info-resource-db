@@ -112,6 +112,109 @@ def create_app():
         records = database.get_search_records(keyword, limit)
         return jsonify({"records": [r.to_dict() for r in records]})
 
+    @app.route("/api/upload", methods=["POST"])
+    def api_upload():
+        """上传自定义商品数据进行比价
+
+        支持JSON格式：
+        {
+            "keyword": "商品关键词",
+            "products": [
+                {
+                    "title": "商品名称",
+                    "price": 1999.00,
+                    "sales": 1000,
+                    "shop_name": "店铺名",
+                    "platform": "custom"  // 可选，默认custom
+                }
+            ]
+        }
+        """
+        try:
+            data = request.get_json()
+            if not data:
+                return jsonify({"error": "请提供JSON数据"}), 400
+
+            keyword = data.get("keyword", "").strip()
+            products_data = data.get("products", [])
+
+            if not keyword:
+                return jsonify({"error": "关键词不能为空"}), 400
+
+            if not products_data:
+                return jsonify({"error": "商品数据不能为空"}), 400
+
+            from storage.models import Product, PricePoint
+            from datetime import datetime
+            from core.cleaner import clean_products
+
+            products = []
+            now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+            for i, p in enumerate(products_data):
+                product = Product(
+                    product_key=f"custom_{keyword}_{i}_{int(datetime.now().timestamp())}",
+                    platform=p.get("platform", "custom"),
+                    title=p.get("title", "未知商品"),
+                    price=float(p.get("price", 0)),
+                    url=p.get("url", "#"),
+                    image_url=p.get("image_url", ""),
+                    shop_name=p.get("shop_name", "自定义"),
+                    shop_rating=float(p.get("shop_rating", 4.5)),
+                    sales=int(p.get("sales", 0)),
+                    keyword=keyword,
+                )
+                products.append(product)
+
+            # 清洗并保存商品
+            products = clean_products(products)
+            database.batch_insert_products(products)
+
+            # 记录价格历史
+            price_points = []
+            for p in products:
+                price_points.append(PricePoint(
+                    product_key=p.product_key,
+                    price=p.price,
+                    collected_at=now,
+                    keyword=keyword,
+                ))
+            database.batch_insert_price_history(price_points)
+
+            # 生成分析结果
+            analysis = full_analysis(products)
+            analysis["uploaded"] = True
+            analysis["upload_count"] = len(products)
+
+            return jsonify({
+                "success": True,
+                "keyword": keyword,
+                "count": len(products),
+                "products": analysis["products"],
+                "stats": analysis["stats"],
+            })
+
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+    @app.route("/api/upload/template")
+    def api_upload_template():
+        """获取上传数据模板"""
+        template = {
+            "keyword": "商品关键词",
+            "products": [
+                {
+                    "title": "商品名称",
+                    "price": 1999.00,
+                    "sales": 1000,
+                    "shop_name": "店铺名",
+                    "platform": "custom",
+                    "url": "https://example.com/product"
+                }
+            ]
+        }
+        return jsonify(template)
+
     return app
 
 

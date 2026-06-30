@@ -4,6 +4,13 @@
     box-sizing: border-box;
 }
 
+svg {
+    display: block;
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+}
+
 :root {
     --bg-primary: #0a0a0f;
     --bg-secondary: #12121a;
@@ -257,6 +264,7 @@ body::before {
     height: 20px;
     color: var(--text-tertiary);
     z-index: 1;
+    flex-shrink: 0;
 }
 
 .search-input-wrap input {

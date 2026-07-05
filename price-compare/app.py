@@ -215,6 +215,29 @@ def create_app():
         }
         return jsonify(template)
 
+    @app.route("/api/deploy", methods=["POST"])
+    def api_deploy():
+        """远程部署：拉取最新代码并重启服务"""
+        import subprocess
+        try:
+            pull = subprocess.run(
+                ["git", "pull", "origin", "trae/agent-w4LV0u"],
+                capture_output=True, text=True, timeout=30,
+                cwd="/www/bijia-system"
+            )
+            restart = subprocess.run(
+                ["systemctl", "restart", "bijia"],
+                capture_output=True, text=True, timeout=10
+            )
+            return jsonify({
+                "success": True,
+                "pull_output": pull.stdout,
+                "pull_errors": pull.stderr,
+                "restart_output": restart.stdout,
+            })
+        except Exception as e:
+            return jsonify({"success": False, "error": str(e)}), 500
+
     return app
 
 

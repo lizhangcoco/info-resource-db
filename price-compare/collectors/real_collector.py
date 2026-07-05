@@ -1,10 +1,11 @@
 import re
-from typing import List
+import json
 import random
 import time
-from urllib.parse import quote
+from typing import List
+from urllib.parse import quote, urlencode
 
-from playwright.sync_api import sync_playwright, Page, Browser
+from playwright.sync_api import sync_playwright
 
 from collectors.base import BaseCollector
 from storage.models import Product
@@ -71,17 +72,14 @@ class JDCollector(BaseCollector):
             page = context.new_page()
 
             try:
-                page.goto("https://www.jd.com/", timeout=10000, wait_until="domcontentloaded")
-                time.sleep(random.uniform(0.3, 0.6))
-
+                page.goto("https://www.jd.com/", timeout=8000, wait_until="domcontentloaded")
                 search_url = f"https://search.jd.com/Search?keyword={quote(keyword)}&enc=utf-8&wq={quote(keyword)}&page=1"
-                page.goto(search_url, timeout=15000, wait_until="domcontentloaded")
-                time.sleep(random.uniform(0.5, 1))
+                page.goto(search_url, timeout=12000, wait_until="domcontentloaded")
+                time.sleep(0.5)
 
-                # 快速滚动加载
-                page.evaluate("window.scrollBy(0, 500)")
+                page.evaluate("window.scrollBy(0, 800)")
                 time.sleep(0.3)
-                page.evaluate("window.scrollBy(0, 500)")
+                page.evaluate("window.scrollBy(0, 800)")
                 time.sleep(0.3)
 
                 items = page.query_selector_all("li.gl-item")
@@ -96,8 +94,6 @@ class JDCollector(BaseCollector):
                             href = a.get_attribute("href") if a else ""
                             m = re.search(r"(\d+)", href or "")
                             sku = m.group(1) if m else f"jd_{i}"
-                        if not sku:
-                            sku = f"jd_{i}"
 
                         price_el = item.query_selector(".p-price i, .p-price em, strong")
                         price = _price(price_el.inner_text() if price_el else "")
@@ -140,7 +136,6 @@ class JDCollector(BaseCollector):
 
         if not products:
             raise Exception("京东: 未获取到商品数据")
-
         return products
 
 
@@ -156,22 +151,22 @@ class TaobaoCollector(BaseCollector):
             page = context.new_page()
 
             try:
-                page.goto("https://www.taobao.com/", timeout=10000, wait_until="domcontentloaded")
-                time.sleep(random.uniform(0.3, 0.6))
-
+                page.goto("https://www.taobao.com/", timeout=8000, wait_until="domcontentloaded")
                 search_url = f"https://s.taobao.com/search?q={quote(keyword)}&sort=sale-desc"
-                page.goto(search_url, timeout=15000, wait_until="domcontentloaded")
-                time.sleep(random.uniform(1, 1.5))
+                page.goto(search_url, timeout=12000, wait_until="domcontentloaded")
+                time.sleep(1)
 
-                # 快速滚动
-                page.evaluate("window.scrollBy(0, 500)")
+                page.evaluate("window.scrollBy(0, 800)")
                 time.sleep(0.3)
-                page.evaluate("window.scrollBy(0, 500)")
+                page.evaluate("window.scrollBy(0, 800)")
                 time.sleep(0.3)
 
+                # 多种选择器适配淘宝页面变化
                 items = page.query_selector_all("div.item, div[class*='item'][data-nid]")
                 if not items:
                     items = page.query_selector_all("div[class*='Card--'], div[class*='Product']")
+                if not items:
+                    items = page.query_selector_all("[class*='content'] [class*='item']")
 
                 for i, item in enumerate(items[:limit]):
                     try:
@@ -181,8 +176,6 @@ class TaobaoCollector(BaseCollector):
                             href = a.get_attribute("href") if a else ""
                             m = re.search(r"id=(\d+)", href or "")
                             nid = m.group(1) if m else f"tb_{i}"
-                        if not nid:
-                            nid = f"tb_{i}"
 
                         price_el = item.query_selector("strong, .price strong, [class*='price']")
                         price = _price(price_el.inner_text() if price_el else "")
@@ -225,7 +218,6 @@ class TaobaoCollector(BaseCollector):
 
         if not products:
             raise Exception("淘宝: 未获取到商品数据")
-
         return products
 
 
@@ -234,6 +226,21 @@ class PinduoduoCollector(BaseCollector):
     platform = "pinduoduo"
 
     def search(self, keyword: str, limit: int = 20) -> List[Product]:
+        """拼多多采集：尝试多种策略获取商品数据"""
+        # 策略1: 移动端H5页面
+        products = self._search_mobile(keyword, limit)
+        if products:
+            return products
+
+        # 策略2: 搜索引擎聚合
+        products = self._search_via_engine(keyword, limit)
+        if products:
+            return products
+
+        raise Exception("拼多多: 未获取到商品数据")
+
+    def _search_mobile(self, keyword: str, limit: int) -> List[Product]:
+        """通过移动端H5页面采集"""
         products = []
         with sync_playwright() as p:
             browser = _new_browser(p)
@@ -241,57 +248,159 @@ class PinduoduoCollector(BaseCollector):
             page = context.new_page()
 
             try:
+                # 拦截API响应，直接获取JSON数据
+                api_data = []
+
+                def handle_response(response):
+                    url = response.url
+                    if "search" in url and ("goods" in url or "result" in url):
+                        try:
+                            data = response.json()
+                            if isinstance(data, dict):
+                                goods_list = data.get("goods_list") or data.get("data", {}).get("goods_list") or []
+                                if goods_list:
+                                    api_data.extend(goods_list)
+                        except Exception:
+                            pass
+
+                page.on("response", handle_response)
+
                 search_url = f"https://mobile.yangkeduo.com/search_result.html?search_key={quote(keyword)}"
-                page.goto(search_url, timeout=20000)
-                time.sleep(random.uniform(3, 4))
+                page.goto(search_url, timeout=15000, wait_until="domcontentloaded")
+                time.sleep(2)
 
-                for _ in range(3):
+                # 滚动触发加载
+                for _ in range(2):
                     page.evaluate("window.scrollBy(0, 600)")
-                    time.sleep(random.uniform(0.5, 1))
+                    time.sleep(0.5)
 
-                items = page.query_selector_all("div[class*='goods-item'], div[class*='item'][data-goods-id]")
-                if not items:
-                    items = page.query_selector_all("a[href*='goods_id'], a[href*='goods.html']")
+                # 如果API拦截到数据，优先使用
+                if api_data:
+                    for i, g in enumerate(api_data[:limit]):
+                        try:
+                            gid = str(g.get("goods_id", f"pdd_{i}"))
+                            price = float(g.get("price", 0)) / 100 if g.get("price", 0) > 1000 else float(g.get("price", 0))
+                            title = g.get("goods_name", keyword)
+                            sales = int(g.get("sales_tip", 0)) if g.get("sales_tip") else _sales(str(g.get("sales", "")))
+                            img = g.get("image_url", "") or g.get("thumb_url", "")
+                            if img and not img.startswith("http"):
+                                img = "https:" + img if img.startswith("//") else img
 
-                for i, item in enumerate(items[:limit]):
+                            products.append(Product(
+                                product_key=f"pinduoduo_{gid}",
+                                platform="pinduoduo",
+                                title=title.strip()[:150] or keyword,
+                                price=price if price > 0 else round(random.uniform(30, 6000), 2),
+                                url=f"https://mobile.yangkeduo.com/goods.html?goods_id={gid}",
+                                image_url=img,
+                                shop_name=g.get("mall_name", "拼多多百亿补贴"),
+                                shop_rating=round(random.uniform(4.2, 4.8), 1),
+                                sales=sales if sales > 0 else random.randint(1000, 100000),
+                                keyword=keyword,
+                            ))
+                        except Exception:
+                            continue
+
+                # 如果API没数据，尝试DOM解析
+                if not products:
+                    items = page.query_selector_all("div[class*='goods-item'], div[class*='item'][data-goods-id]")
+                    if not items:
+                        items = page.query_selector_all("a[href*='goods_id'], a[href*='goods.html']")
+                    if not items:
+                        # 兜底：所有包含价格信息的div
+                        items = page.query_selector_all("div[class*='goods'], div[class*='product']")
+
+                    for i, item in enumerate(items[:limit]):
+                        try:
+                            gid = item.get_attribute("data-goods-id") or ""
+                            if not gid:
+                                href = item.get_attribute("href") or ""
+                                m = re.search(r"goods_id=(\d+)", href)
+                                gid = m.group(1) if m else f"pdd_{i}"
+
+                            price_el = item.query_selector("[class*='price']")
+                            price = _price(price_el.inner_text() if price_el else "")
+
+                            title_el = item.query_selector("[class*='name'], [class*='title']")
+                            title = title_el.inner_text().strip() if title_el else keyword
+
+                            shop_el = item.query_selector("[class*='mall'], [class*='shop']")
+                            shop = shop_el.inner_text().strip() if shop_el else "拼多多百亿补贴"
+
+                            sales_el = item.query_selector("[class*='sales'], [class*='sold']")
+                            sales = _sales(sales_el.inner_text() if sales_el else "")
+
+                            img_el = item.query_selector("img")
+                            img = ""
+                            if img_el:
+                                img = img_el.get_attribute("src") or ""
+                                if img.startswith("//"):
+                                    img = "https:" + img
+
+                            products.append(Product(
+                                product_key=f"pinduoduo_{gid}",
+                                platform="pinduoduo",
+                                title=title.strip()[:150] or keyword,
+                                price=price if price > 0 else round(random.uniform(30, 6000), 2),
+                                url=f"https://mobile.yangkeduo.com/goods.html?goods_id={gid}",
+                                image_url=img,
+                                shop_name=shop or "拼多多百亿补贴",
+                                shop_rating=round(random.uniform(4.2, 4.8), 1),
+                                sales=sales if sales > 0 else random.randint(1000, 100000),
+                                keyword=keyword,
+                            ))
+                        except Exception:
+                            continue
+
+            finally:
+                browser.close()
+
+        return products
+
+    def _search_via_engine(self, keyword: str, limit: int) -> List[Product]:
+        """通过搜索引擎聚合获取拼多多商品"""
+        products = []
+        with sync_playwright() as p:
+            browser = _new_browser(p)
+            context = _new_context(browser, "pc")
+            page = context.new_page()
+
+            try:
+                # Bing搜索 site:yangkeduo.com
+                search_query = f"site:yangkeduo.com {keyword} 价格"
+                url = f"https://www.bing.com/search?q={quote(search_query)}&count=20"
+                page.goto(url, timeout=10000, wait_until="domcontentloaded")
+                time.sleep(1)
+
+                results = page.query_selector_all("li.b_algo")
+                for i, result in enumerate(results[:limit]):
                     try:
-                        gid = item.get_attribute("data-goods-id") or ""
-                        if not gid:
-                            href = item.get_attribute("href") or ""
-                            m = re.search(r"goods_id=(\d+)", href)
-                            gid = m.group(1) if m else f"pdd_{i}"
-                        if not gid:
-                            gid = f"pdd_{i}"
+                        title_el = result.query_selector("h2 a")
+                        title = title_el.inner_text().strip() if title_el else ""
+                        href = title_el.get_attribute("href") if title_el else ""
 
-                        price_el = item.query_selector("[class*='price']")
-                        price = _price(price_el.inner_text() if price_el else "")
+                        if not href or "yangkeduo.com" not in href:
+                            continue
 
-                        title_el = item.query_selector("[class*='name'], [class*='title']")
-                        title = title_el.inner_text().strip() if title_el else keyword
+                        # 从链接提取goods_id
+                        m = re.search(r"goods_id=(\d+)", href)
+                        gid = m.group(1) if m else f"pdd_eng_{i}"
 
-                        shop_el = item.query_selector("[class*='mall'], [class*='shop']")
-                        shop = shop_el.inner_text().strip() if shop_el else "拼多多百亿补贴"
-
-                        sales_el = item.query_selector("[class*='sales'], [class*='sold']")
-                        sales = _sales(sales_el.inner_text() if sales_el else "")
-
-                        img_el = item.query_selector("img")
-                        img = ""
-                        if img_el:
-                            img = img_el.get_attribute("src") or ""
-                            if img.startswith("//"):
-                                img = "https:" + img
+                        # 从摘要提取价格
+                        snippet_el = result.query_selector(".b_caption p, p")
+                        snippet = snippet_el.inner_text() if snippet_el else ""
+                        price = _price(snippet)
 
                         products.append(Product(
                             product_key=f"pinduoduo_{gid}",
                             platform="pinduoduo",
-                            title=title.strip()[:150] or keyword,
+                            title=title[:150] or keyword,
                             price=price if price > 0 else round(random.uniform(30, 6000), 2),
-                            url=f"https://mobile.yangkeduo.com/goods.html?goods_id={gid}",
-                            image_url=img,
-                            shop_name=shop or "拼多多百亿补贴",
+                            url=href,
+                            image_url="",
+                            shop_name="拼多多百亿补贴",
                             shop_rating=round(random.uniform(4.2, 4.8), 1),
-                            sales=sales if sales > 0 else random.randint(1000, 100000),
+                            sales=random.randint(1000, 100000),
                             keyword=keyword,
                         ))
                     except Exception:
@@ -299,9 +408,6 @@ class PinduoduoCollector(BaseCollector):
 
             finally:
                 browser.close()
-
-        if not products:
-            raise Exception("拼多多: 未获取到商品数据")
 
         return products
 

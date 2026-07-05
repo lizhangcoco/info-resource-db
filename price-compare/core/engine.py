@@ -1,4 +1,5 @@
 import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from typing import List, Callable, Optional
 
@@ -20,19 +21,27 @@ class CollectEngine:
         errors = []
 
         real_collectors = get_real_collectors(platforms)
-        for collector in real_collectors:
+
+        def _collect_one(collector):
             try:
                 if progress_callback:
                     progress_callback(collector.platform, "collecting", 0)
                 products = collector.search(keyword, limit)
-                if products:
-                    all_products.extend(products)
                 if progress_callback:
-                    progress_callback(collector.platform, "done", len(products))
+                    progress_callback(collector.platform, "done", len(products) if products else 0)
+                return collector.platform, products or [], None
             except Exception as e:
-                errors.append(f"{collector.name}: {str(e)}")
                 if progress_callback:
                     progress_callback(collector.platform, "error", 0)
+                return collector.platform, [], f"{collector.name}: {str(e)}"
+
+        with ThreadPoolExecutor(max_workers=3) as executor:
+            futures = {executor.submit(_collect_one, c): c for c in real_collectors}
+            for future in as_completed(futures):
+                platform, products, error = future.result()
+                all_products.extend(products)
+                if error:
+                    errors.append(error)
 
         if not all_products:
             error_msg = "所有平台采集失败: " + "; ".join(errors) if errors else "未获取到任何商品数据"

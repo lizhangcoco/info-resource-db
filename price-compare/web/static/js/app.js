@@ -159,7 +159,7 @@ async function doSearch() {
 
 function pollSearchStatus(recordId) {
     let count = 0;
-    const maxCount = 120;
+    const maxCount = 200;
 
     searchPollingTimer = setInterval(async () => {
         count++;

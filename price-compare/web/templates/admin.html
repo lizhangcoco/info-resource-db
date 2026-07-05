@@ -465,7 +465,7 @@
                 </div>
                 <div class="form-group" style="margin-top: 20px;">
                     <label class="form-label">选择文件</label>
-                    <div class="file-upload-area" onclick="document.getElementById('importFile').click()">
+                    <div class="file-upload-area" id="fileUploadArea" onclick="triggerFileInput()">
                         <input type="file" id="importFile" accept=".xlsx,.xls,.csv" onchange="handleFileSelect(event)" style="display: none;">
                         <div id="fileUploadPlaceholder">
                             <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 48px; height: 48px; opacity: 0.5;">
@@ -973,6 +973,10 @@
             }
         }
 
+        function triggerFileInput() {
+            document.getElementById('importFile').click();
+        }
+
         function handleFileSelect(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -1003,7 +1007,10 @@
         async function startImport() {
             const fileInput = document.getElementById('importFile');
             const file = fileInput.files[0];
-            if (!file) return;
+            if (!file) {
+                alert('请先选择文件');
+                return;
+            }
 
             const importBtn = document.getElementById('importBtn');
             importBtn.disabled = true;
@@ -1021,6 +1028,11 @@
                     },
                     body: formData
                 });
+
+                if (!response.ok) {
+                    const errText = await response.text();
+                    throw new Error(`服务器返回 ${response.status}: ${errText.substring(0, 200)}`);
+                }
 
                 const result = await response.json();
 

@@ -1946,8 +1946,8 @@ textarea:focus {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 10px;
-    padding: 22px 12px;
+    gap: 14px;
+    padding: 28px 12px;
     border-radius: var(--radius-lg);
     cursor: pointer;
     transition: all 0.25s ease;
@@ -2012,17 +2012,17 @@ textarea:focus {
 }
 
 .role-icon {
-    width: 48px;
-    height: 48px;
-    border-radius: 14px;
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
 .role-icon svg {
-    width: 24px;
-    height: 24px;
+    width: 28px;
+    height: 28px;
 }
 
 .role-icon.buyer-icon {
@@ -2056,8 +2056,10 @@ textarea:focus {
 }
 
 .role-name {
-    font-size: 16px;
-    font-weight: 700;
+    font-size: 20px;
+    font-weight: 800;
+    font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", "Hiragino Sans GB", sans-serif;
+    letter-spacing: 2px;
 }
 
 .role-card.buyer-card .role-name {

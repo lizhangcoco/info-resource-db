@@ -542,7 +542,9 @@ def create_app():
 
     @app.route("/api/categories", methods=["GET"])
     def api_categories():
+        from storage.categories import _normalize_type
         product_type = request.args.get("type", "goods")
+        norm_type = _normalize_type(product_type)
         main_category = request.args.get("main_category")
 
         if main_category:
@@ -556,7 +558,7 @@ def create_app():
         return jsonify({
             "product_type": product_type,
             "main_categories": main_categories,
-            "categories": CATEGORIES.get(product_type, {})
+            "categories": CATEGORIES.get(norm_type, {})
         })
 
     @app.route("/api/supplier-products", methods=["GET"])

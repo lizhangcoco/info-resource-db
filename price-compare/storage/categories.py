@@ -207,16 +207,28 @@ CATEGORIES = {
     },
 }
 
+def _normalize_type(product_type):
+    if product_type == "service":
+        return "services"
+    return product_type
+
+
 def get_main_categories(product_type="goods"):
+    product_type = _normalize_type(product_type)
     return list(CATEGORIES.get(product_type, {}).keys())
 
+
 def get_sub_categories(main_category, product_type="goods"):
+    product_type = _normalize_type(product_type)
     return CATEGORIES.get(product_type, {}).get(main_category, [])
+
 
 def get_all_categories():
     return CATEGORIES
 
+
 def validate_category(main_category, sub_category, product_type="goods"):
+    product_type = _normalize_type(product_type)
     if main_category not in CATEGORIES.get(product_type, {}):
         return False
     if sub_category and sub_category not in get_sub_categories(main_category, product_type):

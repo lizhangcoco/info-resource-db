@@ -1934,37 +1934,134 @@ textarea:focus {
     margin-top: 6px;
 }
 
-.login-tabs {
-    display: flex;
-    background: var(--bg-input);
-    border-radius: var(--radius-md);
-    padding: 4px;
+/* Role Selector */
+.role-selector {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
     margin-bottom: 28px;
-    border: 1px solid var(--border-color);
 }
 
-.login-tab {
-    flex: 1;
-    padding: 12px;
-    background: transparent;
-    border: none;
-    color: var(--text-secondary);
-    font-size: 14px;
-    font-weight: 600;
+.role-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 16px 8px;
+    background: var(--bg-input);
+    border: 2px solid var(--border-color);
+    border-radius: var(--radius-md);
     cursor: pointer;
-    border-radius: 8px;
     transition: all 0.25s ease;
-    font-family: inherit;
+    text-align: center;
 }
 
-.login-tab:hover {
+.role-card:hover {
+    border-color: var(--accent-primary);
+    background: rgba(99, 102, 241, 0.05);
+    transform: translateY(-2px);
+}
+
+.role-card.active {
+    border-color: var(--accent-primary);
+    background: rgba(99, 102, 241, 0.12);
+    box-shadow: 0 4px 16px rgba(99, 102, 241, 0.2);
+}
+
+.role-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.role-icon svg {
+    width: 22px;
+    height: 22px;
+}
+
+.role-icon.login-icon {
+    background: rgba(99, 102, 241, 0.15);
+    color: var(--accent-primary);
+}
+
+.role-icon.buyer-icon {
+    background: rgba(59, 130, 246, 0.15);
+    color: var(--accent-blue);
+}
+
+.role-icon.supplier-icon {
+    background: rgba(16, 185, 129, 0.15);
+    color: var(--accent-green);
+}
+
+.role-card.active .role-icon.login-icon {
+    background: var(--accent-primary);
+    color: white;
+}
+
+.role-card.active .role-icon.buyer-icon {
+    background: var(--accent-blue);
+    color: white;
+}
+
+.role-card.active .role-icon.supplier-icon {
+    background: var(--accent-green);
+    color: white;
+}
+
+.role-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.role-name {
+    font-size: 13px;
+    font-weight: 700;
     color: var(--text-primary);
 }
 
-.login-tab.active {
-    background: var(--gradient-primary);
-    color: white;
-    box-shadow: 0 2px 12px rgba(139, 92, 246, 0.3);
+.role-card.active .role-name {
+    color: var(--accent-primary);
+}
+
+.role-desc {
+    font-size: 11px;
+    color: var(--text-tertiary);
+    line-height: 1.4;
+}
+
+/* Register Banner */
+.register-banner {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    border-radius: var(--radius-md);
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.register-banner svg {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+}
+
+.register-banner.buyer-banner {
+    background: rgba(59, 130, 246, 0.1);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    color: var(--accent-blue);
+}
+
+.register-banner.supplier-banner {
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    color: var(--accent-green);
 }
 
 .login-form {

@@ -957,6 +957,10 @@ def create_app():
                 capture_output=True, text=True, timeout=30,
                 cwd="/www/bijia-system"
             )
+            install = subprocess.run(
+                ["bash", "-c", "source /www/bijia-system/price-compare/venv/bin/activate && pip install -r /www/bijia-system/price-compare/requirements.txt"],
+                capture_output=True, text=True, timeout=120
+            )
             restart = subprocess.run(
                 ["systemctl", "restart", "bijia"],
                 capture_output=True, text=True, timeout=10
@@ -965,6 +969,8 @@ def create_app():
                 "success": True,
                 "pull_output": pull.stdout,
                 "pull_errors": pull.stderr,
+                "install_output": install.stdout[-500:] if install.stdout else "",
+                "install_errors": install.stderr[-500:] if install.stderr else "",
                 "restart_output": restart.stdout,
             })
         except Exception as e:

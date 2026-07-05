@@ -54,7 +54,12 @@ def create_app():
 
     @app.route("/admin")
     def admin_page():
-        return render_template("admin.html")
+        token = request.cookies.get("token") or request.headers.get("Authorization", "").replace("Bearer ", "")
+        if token:
+            payload = decode_jwt(token)
+            if payload and payload.get("role") == "admin":
+                return render_template("admin.html")
+        return render_template("login.html")
 
     @app.route("/api/platforms")
     def api_platforms():
@@ -308,6 +313,7 @@ def create_app():
         email = data.get("email", "").strip()
         phone = data.get("phone", "").strip()
         company_name = data.get("company_name", "").strip()
+        role = data.get("role", "buyer").strip()
 
         if not username or not password:
             return jsonify({"error": "用户名和密码不能为空"}), 400
@@ -315,23 +321,55 @@ def create_app():
         if len(password) < 6:
             return jsonify({"error": "密码长度至少6位"}), 400
 
+        if role not in ("buyer", "supplier"):
+            return jsonify({"error": "无效的角色类型"}), 400
+
         existing_user = database.get_user_by_username(username)
         if existing_user:
             return jsonify({"error": "用户名已存在"}), 400
 
         password_hash = generate_password_hash(password)
+        supplier_id = None
+
+        if role == "supplier":
+            supplier_name = data.get("supplier_name", "").strip() or company_name
+            if not supplier_name:
+                return jsonify({"error": "供应商名称不能为空"}), 400
+
+            supplier = Supplier(
+                name=supplier_name,
+                contact_name=data.get("contact_name", "").strip(),
+                contact_phone=phone,
+                contact_email=email,
+                address=data.get("address", "").strip(),
+                business_license=data.get("business_license", "").strip(),
+                qualifications=data.get("qualifications", "").strip(),
+                status="pending",
+                remark="供应商自主注册，待审核",
+            )
+            supplier_id = database.create_supplier(supplier)
+
+        user_status = "active" if role == "buyer" else "pending"
         user = User(
             username=username,
             password_hash=password_hash,
             email=email,
             phone=phone,
-            role="buyer",
+            role=role,
             company_name=company_name,
-            status="active",
+            supplier_id=supplier_id,
+            status=user_status,
         )
         user_id = database.create_user(user)
 
-        token = generate_jwt(user_id, username, "buyer")
+        if role == "supplier":
+            return jsonify({
+                "success": True,
+                "message": "注册成功，请等待管理员审核",
+                "user": database.get_user_by_id(user_id).to_dict(),
+            })
+
+        token = generate_jwt(user_id, username, role)
         return jsonify({
             "success": True,
             "token": token,
@@ -475,6 +513,31 @@ def create_app():
 
         database.update_supplier(supplier_id, status="approved")
         supplier = database.get_supplier_by_id(supplier_id)
+
+        users = database.get_users(role="supplier")
+        for u in users:
+            if u.supplier_id == supplier_id:
+                database.update_user(u.id, status="active")
+
+        return jsonify({"success": True, "supplier": supplier.to_dict()})
+
+    @app.route("/api/suppliers/<int:supplier_id>/reject", methods=["POST"])
+    def api_suppliers_reject(supplier_id):
+        auth_check = require_auth("admin")
+        if auth_check:
+            return auth_check
+
+        data = request.get_json() or {}
+        remark = data.get("remark", "")
+
+        database.update_supplier(supplier_id, status="rejected", remark=remark)
+        supplier = database.get_supplier_by_id(supplier_id)
+
+        users = database.get_users(role="supplier")
+        for u in users:
+            if u.supplier_id == supplier_id:
+                database.update_user(u.id, status="disabled")
+
         return jsonify({"success": True, "supplier": supplier.to_dict()})
 
     @app.route("/api/supplier-products", methods=["GET"])

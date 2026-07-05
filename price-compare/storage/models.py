@@ -126,6 +126,7 @@ class User:
     phone: str = ""
     role: str = "buyer"
     company_name: str = ""
+    supplier_id: Optional[int] = None
     member_expire_at: Optional[str] = None
     status: str = "active"
     created_at: Optional[str] = None
@@ -139,6 +140,7 @@ class User:
             "phone": self.phone,
             "role": self.role,
             "company_name": self.company_name,
+            "supplier_id": self.supplier_id,
             "member_expire_at": self.member_expire_at,
             "status": self.status,
             "created_at": self.created_at,

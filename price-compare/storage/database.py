@@ -79,6 +79,7 @@ def init_db():
                 phone VARCHAR(20) DEFAULT '',
                 role VARCHAR(20) DEFAULT 'buyer',
                 company_name VARCHAR(200) DEFAULT '',
+                supplier_id INTEGER DEFAULT NULL,
                 member_expire_at DATETIME DEFAULT NULL,
                 status VARCHAR(20) DEFAULT 'active',
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -521,12 +522,21 @@ def create_user(user: User) -> int:
     with get_db() as conn:
         cursor = conn.cursor()
         cursor.execute("""
-            INSERT INTO users (username, password_hash, email, phone, role, company_name, member_expire_at, status, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            user.username, user.password_hash, user.email, user.phone,
-            user.role, user.company_name, user.member_expire_at, user.status, now, now
-        ))
+            INSERT INTO users (username, password_hash, email, phone, role, company_name, supplier_id, member_expire_at, status, created_at, updated_at)
+            VALUES (:username, :password_hash, :email, :phone, :role, :company_name, :supplier_id, :member_expire_at, :status, :created_at, :updated_at)
+        """, {
+            "username": user.username,
+            "password_hash": user.password_hash,
+            "email": user.email,
+            "phone": user.phone,
+            "role": user.role,
+            "company_name": user.company_name,
+            "supplier_id": user.supplier_id,
+            "member_expire_at": user.member_expire_at,
+            "status": user.status,
+            "created_at": now,
+            "updated_at": now,
+        })
         return cursor.lastrowid
 
 
@@ -545,6 +555,7 @@ def get_user_by_username(username: str) -> Optional[User]:
             phone=row["phone"],
             role=row["role"],
             company_name=row["company_name"],
+            supplier_id=row["supplier_id"],
             member_expire_at=row["member_expire_at"],
             status=row["status"],
             created_at=row["created_at"],
@@ -567,6 +578,7 @@ def get_user_by_id(user_id: int) -> Optional[User]:
             phone=row["phone"],
             role=row["role"],
             company_name=row["company_name"],
+            supplier_id=row["supplier_id"],
             member_expire_at=row["member_expire_at"],
             status=row["status"],
             created_at=row["created_at"],
@@ -581,7 +593,7 @@ def update_user(user_id: int, **kwargs):
         updates = ["updated_at = ?"]
         params = [now]
         for key, value in kwargs.items():
-            if key in ("username", "password_hash", "email", "phone", "role", "company_name", "member_expire_at", "status"):
+            if key in ("username", "password_hash", "email", "phone", "role", "company_name", "supplier_id", "member_expire_at", "status"):
                 updates.append(f"{key} = ?")
                 params.append(value)
         params.append(user_id)
@@ -614,6 +626,7 @@ def get_users(role: str = None, status: str = None, limit: int = 50) -> List[Use
             phone=row["phone"],
             role=row["role"],
             company_name=row["company_name"],
+            supplier_id=row["supplier_id"],
             member_expire_at=row["member_expire_at"],
             status=row["status"],
             created_at=row["created_at"],

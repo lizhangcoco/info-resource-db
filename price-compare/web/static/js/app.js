@@ -728,6 +728,12 @@ function updateHeaderUser() {
         </button>`;
     }
 
+    const roleText = {
+        'admin': '管理员',
+        'buyer': '采购人',
+        'supplier': '供应商'
+    }[currentUser.role] || currentUser.role;
+
     actions.innerHTML = `
         <div class="header-badge">
             <span class="badge-dot"></span>
@@ -740,19 +746,70 @@ function updateHeaderUser() {
             </svg>
             导入数据
         </button>
-        <div class="user-menu">
+        <div class="user-menu" onclick="toggleUserDropdown(event)">
             <div class="user-avatar">${currentUser.username?.charAt(0).toUpperCase() || 'U'}</div>
             <div class="user-info">
-                <div class="user-name">${currentUser.username}</div>
-                <div class="user-role">${currentUser.role === 'admin' ? '管理员' : '采购人'}</div>
+                <span class="user-name">${currentUser.username}</span>
+                <span class="user-role">${roleText}</span>
+            </div>
+            <svg class="user-dropdown-arrow" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <polyline points="6 9 12 15 18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <div class="user-dropdown" id="userDropdown">
+                <div class="dropdown-item" onclick="goToProfile()">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" stroke="currentColor" stroke-width="2"/>
+                        <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                    个人中心
+                </div>
+                <div class="dropdown-item" onclick="handleLogout()">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <polyline points="16 17 21 12 16 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <line x1="21" y1="12" x2="9" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    退出登录
+                </div>
             </div>
         </div>
     `;
 }
 
+function toggleUserDropdown(e) {
+    e.stopPropagation();
+    const dropdown = document.getElementById('userDropdown');
+    if (dropdown) {
+        dropdown.classList.toggle('show');
+    }
+}
+
+document.addEventListener('click', function() {
+    const dropdown = document.getElementById('userDropdown');
+    if (dropdown) {
+        dropdown.classList.remove('show');
+    }
+});
+
+function goToProfile() {
+    alert('个人中心功能开发中...');
+}
+
+function handleLogout() {
+    if (confirm('确定要退出登录吗？')) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        currentUser = null;
+        window.location.href = API_BASE + '/login';
+    }
+}
+
 async function initDemo() {
     const isAuthed = await checkAuth();
-    if (!isAuthed) return;
+    if (!isAuthed) {
+        window.location.href = API_BASE + '/login';
+        return;
+    }
 
     try {
         const data = await apiFetch('/api/keywords');

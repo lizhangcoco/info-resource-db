@@ -461,7 +461,7 @@
                     <td>${u.username}</td>
                     <td>${u.company_name || '-'}</td>
                     <td>${u.phone || '-'}</td>
-                    <td>${u.role === 'admin' ? '管理员' : '采购人'}</td>
+                    <td>${u.role === 'admin' ? '管理员' : u.role === 'supplier' ? '供应商' : '采购人'}</td>
                     <td>${u.status === 'active' ? '<span class="status-badge active">正常</span>' : '<span class="status-badge disabled">停用</span>'}</td>
                     <td>${u.member_expire_at || '-'}</td>
                     <td>
@@ -542,7 +542,10 @@
                     <td>${getStatusBadge(s.status)}</td>
                     <td>
                         <button class="action-btn edit" onclick="editSupplier(${s.id})">编辑</button>
-                        ${s.status === 'pending' ? `<button class="action-btn approve" onclick="approveSupplier(${s.id})">审核通过</button>` : ''}
+                        ${s.status === 'pending' ? `
+                            <button class="action-btn approve" onclick="approveSupplier(${s.id})">通过</button>
+                            <button class="action-btn reject" onclick="rejectSupplier(${s.id})">拒绝</button>
+                        ` : ''}
                     </td>
                 </tr>
             `).join('');
@@ -613,8 +616,21 @@
         }
 
         async function approveSupplier(id) {
-            await fetchData(`/api/suppliers/${id}/approve`, { method: 'POST' });
-            loadSuppliers();
+            if (confirm('确定要审核通过该供应商吗？')) {
+                await fetchData(`/api/suppliers/${id}/approve`, { method: 'POST' });
+                loadSuppliers();
+            }
+        }
+
+        async function rejectSupplier(id) {
+            const remark = prompt('请输入拒绝原因（可选）：', '');
+            if (remark !== null) {
+                await fetchData(`/api/suppliers/${id}/reject`, {
+                    method: 'POST',
+                    body: JSON.stringify({ remark })
+                });
+                loadSuppliers();
+            }
         }
 
         async function loadProducts() {
@@ -763,12 +779,25 @@
             loadRFQ();
         }
 
-        window.addEventListener('DOMContentLoaded', () => {
-            const user = JSON.parse(localStorage.getItem('user'));
-            if (user) {
-                document.getElementById('currentUser').innerHTML = user.username;
+        async function checkAdminAuth() {
+            try {
+                const data = await fetchData('/api/auth/me');
+                if (data && data.user && data.user.role === 'admin') {
+                    document.getElementById('currentUser').innerHTML = data.user.username;
+                    return true;
+                }
+            } catch (e) {
+                console.error(e);
             }
-            switchPage('users');
+            window.location.href = API_BASE + '/login';
+            return false;
+        }
+
+        window.addEventListener('DOMContentLoaded', async () => {
+            const isAdmin = await checkAdminAuth();
+            if (isAdmin) {
+                switchPage('users');
+            }
         });
     </script>
 </body>

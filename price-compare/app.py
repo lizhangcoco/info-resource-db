@@ -692,12 +692,13 @@ def create_app():
             cell.alignment = Alignment(horizontal="center", vertical="center")
 
         examples = [
-            ["示例供应商A", "goods", "办公设备", "打印机", "A4彩色激光打印机", "HP M254dw", "台", 2999.00, 1, "10台以上95折", "3-5工作日", 365, "高速彩色打印，支持双面", "", "打印机", "active"],
-            ["示例供应商B", "service", "运维服务", "网络维护", "企业网络年度维护服务", "100节点以内", "年", 12000.00, 1, "", "7x24小时响应", 0, "包含网络设备巡检、故障排除", "", "网络维护", "active"],
+            ["示例供应商A（请替换为实际供应商名称）", "goods", "办公设备", "打印机", "A4彩色激光打印机", "HP M254dw", "台", 2999.00, 1, "10台以上95折", "3-5工作日", 365, "高速彩色打印，支持双面", "", "打印机", "active"],
+            ["示例供应商B（请替换为实际供应商名称）", "service", "运维服务", "网络维护", "企业网络年度维护服务", "100节点以内", "年", 12000.00, 1, "", "7x24小时响应", 0, "包含网络设备巡检、故障排除", "", "网络维护", "active"],
         ]
         for row_idx, example in enumerate(examples, 2):
             for col_idx, value in enumerate(example, 1):
-                ws.cell(row=row_idx, column=col_idx, value=value)
+                cell = ws.cell(row=row_idx, column=col_idx, value=value)
+                cell.font = Font(italic=True, color="888888")
 
         col_widths = [18, 10, 12, 12, 30, 20, 8, 10, 12, 18, 15, 10, 30, 30, 15, 10]
         for i, width in enumerate(col_widths, 1):
@@ -788,7 +789,7 @@ def create_app():
                         "errors": errors
                     }), 400
                 return jsonify({
-                    "error": "文件中没有数据行，请填写数据后再上传。"
+                    "error": "文件中没有有效数据行。请下载模板后，在示例行下方填写真实的供应商商品数据（示例行会被自动跳过），保存后重新上传。"
                 }), 400
 
             success_count, db_errors = database.batch_insert_supplier_products(products)
@@ -820,9 +821,12 @@ def create_app():
         if not price_str:
             return None, f"第{row_num}行: 缺少价格"
 
+        if "示例" in supplier_name or "请替换" in supplier_name:
+            return None, None
+
         supplier = database.get_supplier_by_name(supplier_name)
         if not supplier:
-            return None, f"第{row_num}行: 供应商 '{supplier_name}' 不存在"
+            return None, f"第{row_num}行: 供应商 '{supplier_name}' 不存在，请先在系统中添加该供应商"
 
         try:
             price = float(price_str)

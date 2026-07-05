@@ -46,7 +46,7 @@
                     <label class="filter-label">类型</label>
                     <select class="filter-select" id="productType" onchange="loadCategories()">
                         <option value="goods">货物</option>
-                        <option value="services">服务</option>
+                        <option value="service">服务</option>
                     </select>
                 </div>
                 <div class="filter-section">
@@ -264,8 +264,8 @@
                 grid.innerHTML = products.map(p => `
                     <div class="product-card" onclick="showProductDetail(${p.id})">
                         <div class="product-header">
-                            <span class="product-tag ${p.product_type === 'services' ? 'services' : 'goods'}">
-                                ${p.product_type === 'services' ? '服务' : '货物'}
+                            <span class="product-tag ${p.product_type === 'service' ? 'service' : 'goods'}">
+                                ${p.product_type === 'service' ? '服务' : '货物'}
                             </span>
                             <span class="product-tag category">${p.main_category || '未分类'}</span>
                         </div>
@@ -322,7 +322,7 @@
                 document.getElementById('modalBody').innerHTML = `
                     <div class="detail-row">
                         <span class="detail-label">商品类型</span>
-                        <span class="detail-value">${p.product_type === 'services' ? '服务' : '货物'}</span>
+                        <span class="detail-value">${p.product_type === 'service' ? '服务' : '货物'}</span>
                     </div>
                     <div class="detail-row">
                         <span class="detail-label">分类</span>
@@ -427,6 +427,11 @@
         }
 
         window.addEventListener('DOMContentLoaded', async () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const typeParam = urlParams.get('type');
+            if (typeParam && ['goods', 'service'].includes(typeParam)) {
+                document.getElementById('productType').value = typeParam;
+            }
             const isAuthed = await checkAuth();
             if (isAuthed) {
                 await loadCategories();

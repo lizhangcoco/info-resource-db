@@ -1029,12 +1029,24 @@
                     body: formData
                 });
 
-                if (!response.ok) {
-                    const errText = await response.text();
-                    throw new Error(`服务器返回 ${response.status}: ${errText.substring(0, 200)}`);
-                }
-
                 const result = await response.json();
+
+                if (!response.ok) {
+                    document.getElementById('importResult').style.display = 'block';
+                    document.getElementById('importSuccessCount').textContent = 0;
+                    document.getElementById('importErrorCount').textContent = result.errors ? result.errors.length : 1;
+
+                    const errorList = document.getElementById('importErrorList');
+                    const errorsDiv = document.getElementById('importErrors');
+                    errorsDiv.style.display = 'block';
+
+                    let errorHtml = `<li>${result.error || '导入失败'}</li>`;
+                    if (result.errors && result.errors.length > 0) {
+                        errorHtml += result.errors.map(e => `<li>${e}</li>`).join('');
+                    }
+                    errorList.innerHTML = errorHtml;
+                    return;
+                }
 
                 document.getElementById('importResult').style.display = 'block';
                 document.getElementById('importSuccessCount').textContent = result.success_count || 0;

@@ -758,6 +758,14 @@ def create_app():
                 for cell in ws[1]:
                     headers.append(str(cell.value).strip() if cell.value else "")
 
+                required_headers = ["供应商名称", "商品类型", "商品名称", "价格"]
+                matched = [h for h in required_headers if any(h in header for header in headers)]
+                if len(matched) < 2:
+                    return jsonify({
+                        "error": "文件格式不正确，表头与模板不匹配。请先下载导入模板，按模板格式填写数据后再上传。",
+                        "errors": [f"检测到的表头: {', '.join(headers[:10])}"]
+                    }), 400
+
                 for row_idx in range(2, ws.max_row + 1):
                     row_data = {}
                     for col_idx, header in enumerate(headers):
@@ -774,7 +782,14 @@ def create_app():
                         errors.append(err)
 
             if not products:
-                return jsonify({"error": "没有解析到有效的商品数据", "errors": errors}), 400
+                if errors:
+                    return jsonify({
+                        "error": "没有解析到有效的商品数据",
+                        "errors": errors
+                    }), 400
+                return jsonify({
+                    "error": "文件中没有数据行，请填写数据后再上传。"
+                }), 400
 
             success_count, db_errors = database.batch_insert_supplier_products(products)
             errors.extend(db_errors)

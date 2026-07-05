@@ -55,12 +55,7 @@ def create_app():
 
     @app.route("/admin")
     def admin_page():
-        token = request.cookies.get("token") or request.headers.get("Authorization", "").replace("Bearer ", "")
-        if token:
-            payload = decode_jwt(token)
-            if payload and payload.get("role") == "admin":
-                return render_template("admin.html")
-        return render_template("login.html")
+        return render_template("admin.html")
 
     @app.route("/supplier-products")
     def supplier_products_page():

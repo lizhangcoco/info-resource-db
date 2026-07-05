@@ -14,6 +14,7 @@ from core.trend import get_keyword_trends, batch_trends_to_echarts
 from collectors import get_supported_platforms
 from core.auth import generate_password_hash, verify_password, generate_jwt, decode_jwt
 from storage.models import User, Supplier, SupplierProduct, RFQRecord
+from storage.categories import CATEGORIES, get_main_categories, get_sub_categories
 
 
 def create_app():
@@ -60,6 +61,10 @@ def create_app():
             if payload and payload.get("role") == "admin":
                 return render_template("admin.html")
         return render_template("login.html")
+
+    @app.route("/supplier-products")
+    def supplier_products_page():
+        return render_template("supplier_products.html")
 
     @app.route("/api/platforms")
     def api_platforms():
@@ -540,6 +545,25 @@ def create_app():
 
         return jsonify({"success": True, "supplier": supplier.to_dict()})
 
+    @app.route("/api/categories", methods=["GET"])
+    def api_categories():
+        product_type = request.args.get("type", "goods")
+        main_category = request.args.get("main_category")
+
+        if main_category:
+            sub_categories = get_sub_categories(main_category, product_type)
+            return jsonify({
+                "main_category": main_category,
+                "sub_categories": sub_categories
+            })
+
+        main_categories = get_main_categories(product_type)
+        return jsonify({
+            "product_type": product_type,
+            "main_categories": main_categories,
+            "categories": CATEGORIES.get(product_type, {})
+        })
+
     @app.route("/api/supplier-products", methods=["GET"])
     def api_supplier_products_list():
         auth_check = require_auth()
@@ -548,11 +572,17 @@ def create_app():
 
         supplier_id = request.args.get("supplier_id")
         supplier_id = int(supplier_id) if supplier_id else None
+        product_type = request.args.get("product_type") or None
+        main_category = request.args.get("main_category") or None
+        sub_category = request.args.get("sub_category") or None
         keyword = request.args.get("keyword") or None
         limit = int(request.args.get("limit", 100))
 
         products = database.get_supplier_products(
             supplier_id=supplier_id,
+            product_type=product_type,
+            main_category=main_category,
+            sub_category=sub_category,
             keyword=keyword,
             limit=limit,
         )
@@ -578,6 +608,8 @@ def create_app():
         product = SupplierProduct(
             supplier_id=int(data.get("supplier_id", 0)),
             product_type=data.get("product_type", "goods"),
+            main_category=data.get("main_category", ""),
+            sub_category=data.get("sub_category", ""),
             title=data.get("title", ""),
             spec=data.get("spec", ""),
             unit=data.get("unit", ""),
@@ -612,7 +644,8 @@ def create_app():
 
         data = request.get_json() or {}
         update_fields = {}
-        for field in ["supplier_id", "product_type", "title", "spec", "unit", "price", "min_order",
+        for field in ["supplier_id", "product_type", "main_category", "sub_category",
+                      "title", "spec", "unit", "price", "min_order",
                       "bulk_discount", "delivery_cycle", "warranty_days", "description",
                       "image_url", "status", "keyword"]:
             if field in data:

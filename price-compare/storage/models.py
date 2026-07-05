@@ -197,6 +197,8 @@ class SupplierProduct:
     id: Optional[int] = None
     supplier_id: int = 0
     product_type: str = "goods"
+    main_category: str = ""
+    sub_category: str = ""
     title: str = ""
     spec: str = ""
     unit: str = ""
@@ -217,6 +219,8 @@ class SupplierProduct:
             "id": self.id,
             "supplier_id": self.supplier_id,
             "product_type": self.product_type,
+            "main_category": self.main_category,
+            "sub_category": self.sub_category,
             "title": self.title,
             "spec": self.spec,
             "unit": self.unit,

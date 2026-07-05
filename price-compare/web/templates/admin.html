@@ -159,6 +159,7 @@
                                 <th>ID</th>
                                 <th>商品名称</th>
                                 <th>类型</th>
+                                <th>分类</th>
                                 <th>供应商</th>
                                 <th>价格</th>
                                 <th>单位</th>
@@ -339,10 +340,18 @@
                     </div>
                     <div class="form-group">
                         <label class="form-label">商品类型</label>
-                        <select id="productType">
+                        <select id="productType" onchange="loadProductCategories()">
                             <option value="goods">货物</option>
-                            <option value="service">服务</option>
+                            <option value="services">服务</option>
                         </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">一级分类</label>
+                        <select id="productMainCategory" onchange="loadProductSubCategories()"></select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">二级分类</label>
+                        <select id="productSubCategory"></select>
                     </div>
                     <div class="form-group">
                         <label class="form-label">商品名称</label>
@@ -649,6 +658,7 @@
                     <td>${p.id}</td>
                     <td>${p.title}</td>
                     <td>${p.product_type === 'goods' ? '货物' : '服务'}</td>
+                    <td>${p.main_category || '-'} / ${p.sub_category || '-'}</td>
                     <td>${supplierMap[p.supplier_id] || '-'}</td>
                     <td>¥${p.price}</td>
                     <td>${p.unit || '-'}</td>
@@ -675,10 +685,14 @@
             });
 
             if (productId) {
-                fetchData(`/api/supplier-products/${productId}`).then(data => {
+                fetchData(`/api/supplier-products/${productId}`).then(async data => {
                     if (data) {
                         document.getElementById('productSupplier').value = data.product.supplier_id;
                         document.getElementById('productType').value = data.product.product_type;
+                        await loadProductCategories();
+                        document.getElementById('productMainCategory').value = data.product.main_category || '';
+                        await loadProductSubCategories();
+                        document.getElementById('productSubCategory').value = data.product.sub_category || '';
                         document.getElementById('productTitle').value = data.product.title;
                         document.getElementById('productSpec').value = data.product.spec || '';
                         document.getElementById('productPrice').value = data.product.price;
@@ -691,11 +705,47 @@
                 document.querySelectorAll('#productForm input, #productForm select').forEach(el => el.value = '');
                 document.getElementById('productType').value = 'goods';
                 document.getElementById('productMinOrder').value = '1';
+                loadProductCategories();
             }
         }
 
         function editProduct(id) {
             showProductModal(id);
+        }
+
+        async function loadProductCategories() {
+            const productType = document.getElementById('productType').value;
+            const data = await fetchData(`/api/categories?type=${productType}`);
+            if (!data) return;
+            
+            const mainCatSelect = document.getElementById('productMainCategory');
+            mainCatSelect.innerHTML = '<option value="">请选择</option>';
+            Object.keys(data.categories || {}).forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat;
+                option.textContent = cat;
+                mainCatSelect.appendChild(option);
+            });
+            document.getElementById('productSubCategory').innerHTML = '<option value="">请选择</option>';
+        }
+
+        async function loadProductSubCategories() {
+            const productType = document.getElementById('productType').value;
+            const mainCategory = document.getElementById('productMainCategory').value;
+            const subCatSelect = document.getElementById('productSubCategory');
+            subCatSelect.innerHTML = '<option value="">请选择</option>';
+            
+            if (!mainCategory) return;
+            
+            const data = await fetchData(`/api/categories?type=${productType}&main_category=${encodeURIComponent(mainCategory)}`);
+            if (data && data.sub_categories) {
+                data.sub_categories.forEach(sub => {
+                    const option = document.createElement('option');
+                    option.value = sub;
+                    option.textContent = sub;
+                    subCatSelect.appendChild(option);
+                });
+            }
         }
 
         async function saveProduct(e) {
@@ -704,6 +754,8 @@
             const data = {
                 supplier_id: parseInt(document.getElementById('productSupplier').value),
                 product_type: document.getElementById('productType').value,
+                main_category: document.getElementById('productMainCategory').value,
+                sub_category: document.getElementById('productSubCategory').value,
                 title: document.getElementById('productTitle').value,
                 spec: document.getElementById('productSpec').value,
                 price: parseFloat(document.getElementById('productPrice').value),

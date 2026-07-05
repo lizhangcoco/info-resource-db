@@ -113,6 +113,8 @@ def init_db():
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 supplier_id INTEGER NOT NULL,
                 product_type VARCHAR(20) DEFAULT 'goods',
+                main_category VARCHAR(100) DEFAULT '',
+                sub_category VARCHAR(100) DEFAULT '',
                 title VARCHAR(500) NOT NULL,
                 spec VARCHAR(500) DEFAULT '',
                 unit VARCHAR(20) DEFAULT '',
@@ -740,16 +742,36 @@ def create_supplier_product(product: SupplierProduct) -> int:
         cursor = conn.cursor()
         cursor.execute("""
             INSERT INTO supplier_products (
-                supplier_id, product_type, title, spec, unit, price, min_order,
+                supplier_id, product_type, main_category, sub_category,
+                title, spec, unit, price, min_order,
                 bulk_discount, delivery_cycle, warranty_days, description, image_url,
                 status, keyword, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            product.supplier_id, product.product_type, product.title, product.spec,
-            product.unit, product.price, product.min_order, product.bulk_discount,
-            product.delivery_cycle, product.warranty_days, product.description,
-            product.image_url, product.status, product.keyword, now, now
-        ))
+            ) VALUES (
+                :supplier_id, :product_type, :main_category, :sub_category,
+                :title, :spec, :unit, :price, :min_order,
+                :bulk_discount, :delivery_cycle, :warranty_days, :description, :image_url,
+                :status, :keyword, :created_at, :updated_at
+            )
+        """, {
+            "supplier_id": product.supplier_id,
+            "product_type": product.product_type,
+            "main_category": product.main_category,
+            "sub_category": product.sub_category,
+            "title": product.title,
+            "spec": product.spec,
+            "unit": product.unit,
+            "price": product.price,
+            "min_order": product.min_order,
+            "bulk_discount": product.bulk_discount,
+            "delivery_cycle": product.delivery_cycle,
+            "warranty_days": product.warranty_days,
+            "description": product.description,
+            "image_url": product.image_url,
+            "status": product.status,
+            "keyword": product.keyword,
+            "created_at": now,
+            "updated_at": now,
+        })
         return cursor.lastrowid
 
 
@@ -764,6 +786,8 @@ def get_supplier_product_by_id(product_id: int) -> Optional[SupplierProduct]:
             id=row["id"],
             supplier_id=row["supplier_id"],
             product_type=row["product_type"],
+            main_category=row["main_category"],
+            sub_category=row["sub_category"],
             title=row["title"],
             spec=row["spec"],
             unit=row["unit"],
@@ -788,7 +812,8 @@ def update_supplier_product(product_id: int, **kwargs):
         updates = ["updated_at = ?"]
         params = [now]
         for key, value in kwargs.items():
-            if key in ("supplier_id", "product_type", "title", "spec", "unit", "price", "min_order",
+            if key in ("supplier_id", "product_type", "main_category", "sub_category",
+                       "title", "spec", "unit", "price", "min_order",
                        "bulk_discount", "delivery_cycle", "warranty_days", "description",
                        "image_url", "status", "keyword"):
                 updates.append(f"{key} = ?")
@@ -798,6 +823,7 @@ def update_supplier_product(product_id: int, **kwargs):
 
 
 def get_supplier_products(supplier_id: int = None, product_type: str = None,
+                          main_category: str = None, sub_category: str = None,
                           keyword: str = None, limit: int = 100) -> List[SupplierProduct]:
     with get_db() as conn:
         cursor = conn.cursor()
@@ -809,6 +835,12 @@ def get_supplier_products(supplier_id: int = None, product_type: str = None,
         if product_type:
             query += " AND product_type = ?"
             params.append(product_type)
+        if main_category:
+            query += " AND main_category = ?"
+            params.append(main_category)
+        if sub_category:
+            query += " AND sub_category = ?"
+            params.append(sub_category)
         if keyword:
             query += " AND (title LIKE ? OR spec LIKE ? OR keyword LIKE ?)"
             params.extend([f"%{keyword}%", f"%{keyword}%", f"%{keyword}%"])
@@ -820,6 +852,8 @@ def get_supplier_products(supplier_id: int = None, product_type: str = None,
             id=row["id"],
             supplier_id=row["supplier_id"],
             product_type=row["product_type"],
+            main_category=row["main_category"],
+            sub_category=row["sub_category"],
             title=row["title"],
             spec=row["spec"],
             unit=row["unit"],

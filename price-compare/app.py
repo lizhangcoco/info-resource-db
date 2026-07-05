@@ -5,12 +5,15 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from flask import Flask, render_template, jsonify, request
+from datetime import datetime
 
 from storage import database
 from core.engine import get_engine
 from core.analyzer import full_analysis, mark_recommendations
 from core.trend import get_keyword_trends, batch_trends_to_echarts
 from collectors import get_supported_platforms
+from core.auth import generate_password_hash, verify_password, generate_jwt, decode_jwt
+from storage.models import User, Supplier, SupplierProduct, RFQRecord
 
 
 def create_app():
@@ -22,9 +25,36 @@ def create_app():
     database.init_db()
     engine = get_engine()
 
+    def get_current_user():
+        token = request.headers.get("Authorization", "").replace("Bearer ", "")
+        if not token:
+            return None
+        payload = decode_jwt(token)
+        if not payload:
+            return None
+        return database.get_user_by_id(payload.get("user_id"))
+
+    def require_auth(role=None):
+        user = get_current_user()
+        if not user:
+            return jsonify({"error": "未登录"}), 401
+        if user.status != "active":
+            return jsonify({"error": "账号已停用"}), 403
+        if role and user.role != role:
+            return jsonify({"error": "权限不足"}), 403
+        return None
+
     @app.route("/")
     def index():
         return render_template("index.html")
+
+    @app.route("/login")
+    def login_page():
+        return render_template("login.html")
+
+    @app.route("/admin")
+    def admin_page():
+        return render_template("admin.html")
 
     @app.route("/api/platforms")
     def api_platforms():
@@ -39,6 +69,10 @@ def create_app():
 
     @app.route("/api/search", methods=["POST"])
     def api_search():
+        auth_check = require_auth()
+        if auth_check:
+            return auth_check
+
         data = request.get_json() or {}
         keyword = data.get("keyword", "").strip()
         platforms = data.get("platforms") or get_supported_platforms()
@@ -52,6 +86,10 @@ def create_app():
 
     @app.route("/api/search/<int:record_id>")
     def api_search_status(record_id):
+        auth_check = require_auth()
+        if auth_check:
+            return auth_check
+
         status = engine.get_task_status(record_id)
         if status.get("status") == "completed" and "result" in status:
             result = status["result"]
@@ -60,6 +98,10 @@ def create_app():
 
     @app.route("/api/products")
     def api_products():
+        auth_check = require_auth()
+        if auth_check:
+            return auth_check
+
         keyword = request.args.get("keyword", "").strip()
         platform = request.args.get("platform", "").strip() or None
         order_by = request.args.get("order_by", "price")
@@ -73,13 +115,35 @@ def create_app():
         products = mark_recommendations(products)
         stats = database.get_stats(keyword)
 
+        supplier_products = database.get_supplier_products(keyword=keyword, limit=30)
+        supplier_items = []
+        for sp in supplier_products:
+            supplier = database.get_supplier_by_id(sp.supplier_id)
+            supplier_items.append({
+                **sp.to_dict(),
+                "supplier_name": supplier.name if supplier else "",
+                "contact_phone": supplier.contact_phone if supplier else "",
+                "platform": "supplier",
+                "product_key": f"supplier_{sp.id}",
+                "shop_name": supplier.name if supplier else "",
+            })
+
+        all_products = [p.to_dict() for p in products] + supplier_items
+        if order_by == "price":
+            all_products.sort(key=lambda x: x["price"], reverse=(sort.lower() == "desc"))
+
         return jsonify({
-            "products": [p.to_dict() for p in products],
+            "products": all_products,
             "stats": stats.to_dict(),
+            "supplier_count": len(supplier_items),
         })
 
     @app.route("/api/products/<product_key>/trend")
     def api_product_trend(product_key):
+        auth_check = require_auth()
+        if auth_check:
+            return auth_check
+
         days = int(request.args.get("days", 30))
         from core.trend import get_product_trend, trend_to_echarts
         trend = get_product_trend(product_key, days)
@@ -87,6 +151,10 @@ def create_app():
 
     @app.route("/api/trends")
     def api_trends():
+        auth_check = require_auth()
+        if auth_check:
+            return auth_check
+
         keyword = request.args.get("keyword", "").strip()
         days = int(request.args.get("days", 30))
         limit = int(request.args.get("limit", 5))
@@ -99,6 +167,10 @@ def create_app():
 
     @app.route("/api/stats")
     def api_stats():
+        auth_check = require_auth()
+        if auth_check:
+            return auth_check
+
         keyword = request.args.get("keyword", "").strip()
         if not keyword:
             return jsonify({})
@@ -107,6 +179,10 @@ def create_app():
 
     @app.route("/api/history")
     def api_history():
+        auth_check = require_auth()
+        if auth_check:
+            return auth_check
+
         keyword = request.args.get("keyword", "").strip() or None
         limit = int(request.args.get("limit", 20))
         records = database.get_search_records(keyword, limit)
@@ -114,22 +190,10 @@ def create_app():
 
     @app.route("/api/upload", methods=["POST"])
     def api_upload():
-        """上传自定义商品数据进行比价
+        auth_check = require_auth()
+        if auth_check:
+            return auth_check
 
-        支持JSON格式：
-        {
-            "keyword": "商品关键词",
-            "products": [
-                {
-                    "title": "商品名称",
-                    "price": 1999.00,
-                    "sales": 1000,
-                    "shop_name": "店铺名",
-                    "platform": "custom"  // 可选，默认custom
-                }
-            ]
-        }
-        """
         try:
             data = request.get_json()
             if not data:
@@ -145,7 +209,6 @@ def create_app():
                 return jsonify({"error": "商品数据不能为空"}), 400
 
             from storage.models import Product, PricePoint
-            from datetime import datetime
             from core.cleaner import clean_products
 
             products = []
@@ -166,11 +229,9 @@ def create_app():
                 )
                 products.append(product)
 
-            # 清洗并保存商品
             products = clean_products(products)
             database.batch_insert_products(products)
 
-            # 记录价格历史
             price_points = []
             for p in products:
                 price_points.append(PricePoint(
@@ -181,7 +242,6 @@ def create_app():
                 ))
             database.batch_insert_price_history(price_points)
 
-            # 生成分析结果
             analysis = full_analysis(products)
             analysis["uploaded"] = True
             analysis["upload_count"] = len(products)
@@ -199,7 +259,6 @@ def create_app():
 
     @app.route("/api/upload/template")
     def api_upload_template():
-        """获取上传数据模板"""
         template = {
             "keyword": "商品关键词",
             "products": [
@@ -215,9 +274,358 @@ def create_app():
         }
         return jsonify(template)
 
+    @app.route("/api/auth/login", methods=["POST"])
+    def api_login():
+        data = request.get_json() or {}
+        username = data.get("username", "").strip()
+        password = data.get("password", "").strip()
+
+        if not username or not password:
+            return jsonify({"error": "用户名或密码不能为空"}), 400
+
+        user = database.get_user_by_username(username)
+        if not user:
+            return jsonify({"error": "用户名或密码错误"}), 401
+
+        if not verify_password(password, user.password_hash):
+            return jsonify({"error": "用户名或密码错误"}), 401
+
+        if user.status != "active":
+            return jsonify({"error": "账号已停用"}), 403
+
+        token = generate_jwt(user.id, user.username, user.role)
+        return jsonify({
+            "success": True,
+            "token": token,
+            "user": user.to_dict(),
+        })
+
+    @app.route("/api/auth/register", methods=["POST"])
+    def api_register():
+        data = request.get_json() or {}
+        username = data.get("username", "").strip()
+        password = data.get("password", "").strip()
+        email = data.get("email", "").strip()
+        phone = data.get("phone", "").strip()
+        company_name = data.get("company_name", "").strip()
+
+        if not username or not password:
+            return jsonify({"error": "用户名和密码不能为空"}), 400
+
+        if len(password) < 6:
+            return jsonify({"error": "密码长度至少6位"}), 400
+
+        existing_user = database.get_user_by_username(username)
+        if existing_user:
+            return jsonify({"error": "用户名已存在"}), 400
+
+        password_hash = generate_password_hash(password)
+        user = User(
+            username=username,
+            password_hash=password_hash,
+            email=email,
+            phone=phone,
+            role="buyer",
+            company_name=company_name,
+            status="active",
+        )
+        user_id = database.create_user(user)
+
+        token = generate_jwt(user_id, username, "buyer")
+        return jsonify({
+            "success": True,
+            "token": token,
+            "user": database.get_user_by_id(user_id).to_dict(),
+        })
+
+    @app.route("/api/auth/me")
+    def api_auth_me():
+        user = get_current_user()
+        if not user:
+            return jsonify({"error": "未登录"}), 401
+        return jsonify({"user": user.to_dict()})
+
+    @app.route("/api/users", methods=["GET"])
+    def api_users_list():
+        auth_check = require_auth("admin")
+        if auth_check:
+            return auth_check
+
+        role = request.args.get("role")
+        status = request.args.get("status")
+        limit = int(request.args.get("limit", 50))
+        users = database.get_users(role, status, limit)
+        return jsonify({"users": [u.to_dict() for u in users]})
+
+    @app.route("/api/users/<int:user_id>", methods=["GET"])
+    def api_users_get(user_id):
+        auth_check = require_auth("admin")
+        if auth_check:
+            return auth_check
+
+        user = database.get_user_by_id(user_id)
+        if not user:
+            return jsonify({"error": "用户不存在"}), 404
+        return jsonify({"user": user.to_dict()})
+
+    @app.route("/api/users/<int:user_id>", methods=["PUT"])
+    def api_users_update(user_id):
+        auth_check = require_auth("admin")
+        if auth_check:
+            return auth_check
+
+        data = request.get_json() or {}
+        update_fields = {}
+        if "email" in data:
+            update_fields["email"] = data["email"]
+        if "phone" in data:
+            update_fields["phone"] = data["phone"]
+        if "company_name" in data:
+            update_fields["company_name"] = data["company_name"]
+        if "role" in data:
+            update_fields["role"] = data["role"]
+        if "status" in data:
+            update_fields["status"] = data["status"]
+        if "member_expire_at" in data:
+            update_fields["member_expire_at"] = data["member_expire_at"]
+
+        database.update_user(user_id, **update_fields)
+        user = database.get_user_by_id(user_id)
+        return jsonify({"success": True, "user": user.to_dict()})
+
+    @app.route("/api/suppliers", methods=["GET"])
+    def api_suppliers_list():
+        auth_check = require_auth()
+        if auth_check:
+            return auth_check
+
+        status = request.args.get("status")
+        limit = int(request.args.get("limit", 50))
+        suppliers = database.get_suppliers(status, limit)
+        return jsonify({"suppliers": [s.to_dict() for s in suppliers]})
+
+    @app.route("/api/suppliers", methods=["POST"])
+    def api_suppliers_create():
+        auth_check = require_auth("admin")
+        if auth_check:
+            return auth_check
+
+        data = request.get_json() or {}
+        supplier = Supplier(
+            name=data.get("name", ""),
+            contact_name=data.get("contact_name", ""),
+            contact_phone=data.get("contact_phone", ""),
+            contact_email=data.get("contact_email", ""),
+            address=data.get("address", ""),
+            business_license=data.get("business_license", ""),
+            qualifications=data.get("qualifications", ""),
+            credit_rating=data.get("credit_rating", "A"),
+            price_valid_days=int(data.get("price_valid_days", 30)),
+            payment_terms=data.get("payment_terms", ""),
+            delivery_cycle=data.get("delivery_cycle", ""),
+            after_sales=data.get("after_sales", ""),
+            warranty_days=int(data.get("warranty_days", 0)),
+            status=data.get("status", "pending"),
+            remark=data.get("remark", ""),
+        )
+        supplier_id = database.create_supplier(supplier)
+        return jsonify({"success": True, "supplier": database.get_supplier_by_id(supplier_id).to_dict()})
+
+    @app.route("/api/suppliers/<int:supplier_id>", methods=["GET"])
+    def api_suppliers_get(supplier_id):
+        auth_check = require_auth()
+        if auth_check:
+            return auth_check
+
+        supplier = database.get_supplier_by_id(supplier_id)
+        if not supplier:
+            return jsonify({"error": "供应商不存在"}), 404
+
+        products = database.get_supplier_products(supplier_id=supplier_id)
+        return jsonify({
+            "supplier": supplier.to_dict(),
+            "products": [p.to_dict() for p in products],
+        })
+
+    @app.route("/api/suppliers/<int:supplier_id>", methods=["PUT"])
+    def api_suppliers_update(supplier_id):
+        auth_check = require_auth("admin")
+        if auth_check:
+            return auth_check
+
+        data = request.get_json() or {}
+        update_fields = {}
+        for field in ["name", "contact_name", "contact_phone", "contact_email", "address",
+                      "business_license", "qualifications", "credit_rating", "price_valid_days",
+                      "payment_terms", "delivery_cycle", "after_sales", "warranty_days", "status", "remark"]:
+            if field in data:
+                update_fields[field] = data[field]
+
+        database.update_supplier(supplier_id, **update_fields)
+        supplier = database.get_supplier_by_id(supplier_id)
+        return jsonify({"success": True, "supplier": supplier.to_dict()})
+
+    @app.route("/api/suppliers/<int:supplier_id>/approve", methods=["POST"])
+    def api_suppliers_approve(supplier_id):
+        auth_check = require_auth("admin")
+        if auth_check:
+            return auth_check
+
+        database.update_supplier(supplier_id, status="approved")
+        supplier = database.get_supplier_by_id(supplier_id)
+        return jsonify({"success": True, "supplier": supplier.to_dict()})
+
+    @app.route("/api/supplier-products", methods=["POST"])
+    def api_supplier_products_create():
+        auth_check = require_auth("admin")
+        if auth_check:
+            return auth_check
+
+        data = request.get_json() or {}
+        product = SupplierProduct(
+            supplier_id=int(data.get("supplier_id", 0)),
+            product_type=data.get("product_type", "goods"),
+            title=data.get("title", ""),
+            spec=data.get("spec", ""),
+            unit=data.get("unit", ""),
+            price=float(data.get("price", 0)),
+            min_order=int(data.get("min_order", 1)),
+            bulk_discount=data.get("bulk_discount", ""),
+            delivery_cycle=data.get("delivery_cycle", ""),
+            warranty_days=int(data.get("warranty_days", 0)),
+            description=data.get("description", ""),
+            image_url=data.get("image_url", ""),
+            keyword=data.get("keyword", ""),
+        )
+        product_id = database.create_supplier_product(product)
+        return jsonify({"success": True, "product": database.get_supplier_product_by_id(product_id).to_dict()})
+
+    @app.route("/api/supplier-products/<int:product_id>", methods=["PUT"])
+    def api_supplier_products_update(product_id):
+        auth_check = require_auth("admin")
+        if auth_check:
+            return auth_check
+
+        data = request.get_json() or {}
+        update_fields = {}
+        for field in ["supplier_id", "product_type", "title", "spec", "unit", "price", "min_order",
+                      "bulk_discount", "delivery_cycle", "warranty_days", "description",
+                      "image_url", "status", "keyword"]:
+            if field in data:
+                update_fields[field] = data[field]
+
+        database.update_supplier_product(product_id, **update_fields)
+        product = database.get_supplier_product_by_id(product_id)
+        return jsonify({"success": True, "product": product.to_dict()})
+
+    @app.route("/api/supplier-products/<int:product_id>", methods=["DELETE"])
+    def api_supplier_products_delete(product_id):
+        auth_check = require_auth("admin")
+        if auth_check:
+            return auth_check
+
+        database.update_supplier_product(product_id, status="deleted")
+        return jsonify({"success": True})
+
+    @app.route("/api/rfq", methods=["GET"])
+    def api_rfq_list():
+        auth_check = require_auth()
+        if auth_check:
+            return auth_check
+
+        user = get_current_user()
+        status = request.args.get("status")
+        limit = int(request.args.get("limit", 50))
+
+        if user.role == "admin":
+            rfqs = database.get_rfq_records(status=status, limit=limit)
+        else:
+            rfqs = database.get_rfq_records(user_id=user.id, status=status, limit=limit)
+
+        return jsonify({"rfqs": [r.to_dict() for r in rfqs]})
+
+    @app.route("/api/rfq", methods=["POST"])
+    def api_rfq_create():
+        auth_check = require_auth()
+        if auth_check:
+            return auth_check
+
+        user = get_current_user()
+        data = request.get_json() or {}
+        rfq = RFQRecord(
+            user_id=user.id,
+            product_type=data.get("product_type", "goods"),
+            title=data.get("title", ""),
+            spec=data.get("spec", ""),
+            quantity=int(data.get("quantity", 1)),
+            unit=data.get("unit", ""),
+            expected_price=float(data.get("expected_price", 0)),
+            delivery_requirement=data.get("delivery_requirement", ""),
+            status="pending",
+        )
+        rfq_id = database.create_rfq(rfq)
+        return jsonify({"success": True, "rfq": database.get_rfq_by_id(rfq_id).to_dict()})
+
+    @app.route("/api/rfq/<int:rfq_id>", methods=["GET"])
+    def api_rfq_get(rfq_id):
+        auth_check = require_auth()
+        if auth_check:
+            return auth_check
+
+        rfq = database.get_rfq_by_id(rfq_id)
+        if not rfq:
+            return jsonify({"error": "询价单不存在"}), 404
+
+        user = get_current_user()
+        if user.role != "admin" and rfq.user_id != user.id:
+            return jsonify({"error": "无权查看此询价单"}), 403
+
+        return jsonify({"rfq": rfq.to_dict()})
+
+    @app.route("/api/rfq/<int:rfq_id>", methods=["PUT"])
+    def api_rfq_update(rfq_id):
+        auth_check = require_auth()
+        if auth_check:
+            return auth_check
+
+        rfq = database.get_rfq_by_id(rfq_id)
+        if not rfq:
+            return jsonify({"error": "询价单不存在"}), 404
+
+        user = get_current_user()
+        if user.role != "admin" and rfq.user_id != user.id:
+            return jsonify({"error": "无权修改此询价单"}), 403
+
+        data = request.get_json() or {}
+        update_fields = {}
+        for field in ["product_type", "title", "spec", "quantity", "unit", "expected_price",
+                      "delivery_requirement", "status", "assigned_supplier_id",
+                      "supplier_quote", "quote_response"]:
+            if field in data:
+                update_fields[field] = data[field]
+
+        database.update_rfq(rfq_id, **update_fields)
+        rfq = database.get_rfq_by_id(rfq_id)
+        return jsonify({"success": True, "rfq": rfq.to_dict()})
+
+    @app.route("/api/rfq/<int:rfq_id>/quote", methods=["POST"])
+    def api_rfq_quote(rfq_id):
+        auth_check = require_auth("admin")
+        if auth_check:
+            return auth_check
+
+        data = request.get_json() or {}
+        database.update_rfq(
+            rfq_id,
+            status="quoted",
+            supplier_quote=float(data.get("supplier_quote", 0)),
+            quote_response=data.get("quote_response", ""),
+        )
+        rfq = database.get_rfq_by_id(rfq_id)
+        return jsonify({"success": True, "rfq": rfq.to_dict()})
+
     @app.route("/api/deploy", methods=["POST"])
     def api_deploy():
-        """远程部署：拉取最新代码并重启服务"""
         import subprocess
         try:
             pull = subprocess.run(

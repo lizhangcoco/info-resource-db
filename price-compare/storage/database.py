@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import List, Optional, Tuple
 from contextlib import contextmanager
 
-from storage.models import Product, PricePoint, SearchRecord, TrendData, StatsData
+from storage.models import Product, PricePoint, SearchRecord, TrendData, StatsData, User, Supplier, SupplierProduct, RFQRecord
 
 
 DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "price_compare.db")
@@ -70,11 +70,99 @@ def init_db():
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )
         """)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username VARCHAR(50) UNIQUE NOT NULL,
+                password_hash VARCHAR(255) NOT NULL,
+                email VARCHAR(100) DEFAULT '',
+                phone VARCHAR(20) DEFAULT '',
+                role VARCHAR(20) DEFAULT 'buyer',
+                company_name VARCHAR(200) DEFAULT '',
+                member_expire_at DATETIME DEFAULT NULL,
+                status VARCHAR(20) DEFAULT 'active',
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS suppliers (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name VARCHAR(200) NOT NULL,
+                contact_name VARCHAR(50) DEFAULT '',
+                contact_phone VARCHAR(20) DEFAULT '',
+                contact_email VARCHAR(100) DEFAULT '',
+                address VARCHAR(500) DEFAULT '',
+                business_license VARCHAR(100) DEFAULT '',
+                qualifications TEXT DEFAULT '',
+                credit_rating VARCHAR(10) DEFAULT 'A',
+                price_valid_days INTEGER DEFAULT 30,
+                payment_terms VARCHAR(200) DEFAULT '',
+                delivery_cycle VARCHAR(100) DEFAULT '',
+                after_sales VARCHAR(500) DEFAULT '',
+                warranty_days INTEGER DEFAULT 0,
+                status VARCHAR(20) DEFAULT 'pending',
+                remark TEXT DEFAULT '',
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS supplier_products (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                supplier_id INTEGER NOT NULL,
+                product_type VARCHAR(20) DEFAULT 'goods',
+                title VARCHAR(500) NOT NULL,
+                spec VARCHAR(500) DEFAULT '',
+                unit VARCHAR(20) DEFAULT '',
+                price DECIMAL(12,2) NOT NULL DEFAULT 0,
+                min_order INTEGER DEFAULT 1,
+                bulk_discount VARCHAR(200) DEFAULT '',
+                delivery_cycle VARCHAR(100) DEFAULT '',
+                warranty_days INTEGER DEFAULT 0,
+                description TEXT DEFAULT '',
+                image_url VARCHAR(1000) DEFAULT '',
+                status VARCHAR(20) DEFAULT 'active',
+                keyword VARCHAR(100) DEFAULT '',
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (supplier_id) REFERENCES suppliers(id)
+            )
+        """)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS rfq_records (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                product_type VARCHAR(20) DEFAULT 'goods',
+                title VARCHAR(500) NOT NULL,
+                spec VARCHAR(500) DEFAULT '',
+                quantity INTEGER DEFAULT 1,
+                unit VARCHAR(20) DEFAULT '',
+                expected_price DECIMAL(12,2) DEFAULT 0,
+                delivery_requirement VARCHAR(500) DEFAULT '',
+                status VARCHAR(20) DEFAULT 'draft',
+                assigned_supplier_id INTEGER DEFAULT NULL,
+                supplier_quote DECIMAL(12,2) DEFAULT 0,
+                quote_response TEXT DEFAULT '',
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id),
+                FOREIGN KEY (assigned_supplier_id) REFERENCES suppliers(id)
+            )
+        """)
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_products_keyword ON products(keyword)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_products_platform ON products(platform)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_price_history_key ON price_history(product_key)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_price_history_keyword ON price_history(keyword)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_search_keyword ON search_records(keyword)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_suppliers_name ON suppliers(name)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_suppliers_status ON suppliers(status)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_supplier_products_supplier ON supplier_products(supplier_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_supplier_products_keyword ON supplier_products(keyword)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_rfq_user ON rfq_records(user_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_rfq_status ON rfq_records(status)")
 
         try:
             cursor.execute("ALTER TABLE search_records ADD COLUMN error_msg TEXT DEFAULT NULL")
@@ -339,3 +427,408 @@ def _row_to_product(row: sqlite3.Row) -> Product:
         created_at=row["created_at"],
         updated_at=row["updated_at"],
     )
+
+
+def create_user(user: User) -> int:
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO users (username, password_hash, email, phone, role, company_name, member_expire_at, status, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            user.username, user.password_hash, user.email, user.phone,
+            user.role, user.company_name, user.member_expire_at, user.status, now, now
+        ))
+        return cursor.lastrowid
+
+
+def get_user_by_username(username: str) -> Optional[User]:
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM users WHERE username = ?", (username,))
+        row = cursor.fetchone()
+        if not row:
+            return None
+        return User(
+            id=row["id"],
+            username=row["username"],
+            password_hash=row["password_hash"],
+            email=row["email"],
+            phone=row["phone"],
+            role=row["role"],
+            company_name=row["company_name"],
+            member_expire_at=row["member_expire_at"],
+            status=row["status"],
+            created_at=row["created_at"],
+            updated_at=row["updated_at"],
+        )
+
+
+def get_user_by_id(user_id: int) -> Optional[User]:
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM users WHERE id = ?", (user_id,))
+        row = cursor.fetchone()
+        if not row:
+            return None
+        return User(
+            id=row["id"],
+            username=row["username"],
+            password_hash=row["password_hash"],
+            email=row["email"],
+            phone=row["phone"],
+            role=row["role"],
+            company_name=row["company_name"],
+            member_expire_at=row["member_expire_at"],
+            status=row["status"],
+            created_at=row["created_at"],
+            updated_at=row["updated_at"],
+        )
+
+
+def update_user(user_id: int, **kwargs):
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    with get_db() as conn:
+        cursor = conn.cursor()
+        updates = ["updated_at = ?"]
+        params = [now]
+        for key, value in kwargs.items():
+            if key in ("username", "password_hash", "email", "phone", "role", "company_name", "member_expire_at", "status"):
+                updates.append(f"{key} = ?")
+                params.append(value)
+        params.append(user_id)
+        cursor.execute(f"UPDATE users SET {', '.join(updates)} WHERE id = ?", params)
+
+
+def get_users(role: str = None, status: str = None, limit: int = 50) -> List[User]:
+    with get_db() as conn:
+        cursor = conn.cursor()
+        query = "SELECT * FROM users"
+        params = []
+        conditions = []
+        if role:
+            conditions.append("role = ?")
+            params.append(role)
+        if status:
+            conditions.append("status = ?")
+            params.append(status)
+        if conditions:
+            query += " WHERE " + " AND ".join(conditions)
+        query += " ORDER BY created_at DESC LIMIT ?"
+        params.append(limit)
+        cursor.execute(query, params)
+        rows = cursor.fetchall()
+        return [User(
+            id=row["id"],
+            username=row["username"],
+            password_hash=row["password_hash"],
+            email=row["email"],
+            phone=row["phone"],
+            role=row["role"],
+            company_name=row["company_name"],
+            member_expire_at=row["member_expire_at"],
+            status=row["status"],
+            created_at=row["created_at"],
+            updated_at=row["updated_at"],
+        ) for row in rows]
+
+
+def create_supplier(supplier: Supplier) -> int:
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO suppliers (
+                name, contact_name, contact_phone, contact_email, address,
+                business_license, qualifications, credit_rating, price_valid_days,
+                payment_terms, delivery_cycle, after_sales, warranty_days,
+                status, remark, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            supplier.name, supplier.contact_name, supplier.contact_phone,
+            supplier.contact_email, supplier.address, supplier.business_license,
+            supplier.qualifications, supplier.credit_rating, supplier.price_valid_days,
+            supplier.payment_terms, supplier.delivery_cycle, supplier.after_sales,
+            supplier.warranty_days, supplier.status, supplier.remark, now, now
+        ))
+        return cursor.lastrowid
+
+
+def get_supplier_by_id(supplier_id: int) -> Optional[Supplier]:
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM suppliers WHERE id = ?", (supplier_id,))
+        row = cursor.fetchone()
+        if not row:
+            return None
+        return Supplier(
+            id=row["id"],
+            name=row["name"],
+            contact_name=row["contact_name"],
+            contact_phone=row["contact_phone"],
+            contact_email=row["contact_email"],
+            address=row["address"],
+            business_license=row["business_license"],
+            qualifications=row["qualifications"],
+            credit_rating=row["credit_rating"],
+            price_valid_days=row["price_valid_days"],
+            payment_terms=row["payment_terms"],
+            delivery_cycle=row["delivery_cycle"],
+            after_sales=row["after_sales"],
+            warranty_days=row["warranty_days"],
+            status=row["status"],
+            remark=row["remark"],
+            created_at=row["created_at"],
+            updated_at=row["updated_at"],
+        )
+
+
+def update_supplier(supplier_id: int, **kwargs):
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    with get_db() as conn:
+        cursor = conn.cursor()
+        updates = ["updated_at = ?"]
+        params = [now]
+        for key, value in kwargs.items():
+            if key in ("name", "contact_name", "contact_phone", "contact_email", "address",
+                       "business_license", "qualifications", "credit_rating", "price_valid_days",
+                       "payment_terms", "delivery_cycle", "after_sales", "warranty_days", "status", "remark"):
+                updates.append(f"{key} = ?")
+                params.append(value)
+        params.append(supplier_id)
+        cursor.execute(f"UPDATE suppliers SET {', '.join(updates)} WHERE id = ?", params)
+
+
+def get_suppliers(status: str = None, limit: int = 50) -> List[Supplier]:
+    with get_db() as conn:
+        cursor = conn.cursor()
+        query = "SELECT * FROM suppliers"
+        params = []
+        if status:
+            query += " WHERE status = ?"
+            params.append(status)
+        query += " ORDER BY created_at DESC LIMIT ?"
+        params.append(limit)
+        cursor.execute(query, params)
+        rows = cursor.fetchall()
+        return [Supplier(
+            id=row["id"],
+            name=row["name"],
+            contact_name=row["contact_name"],
+            contact_phone=row["contact_phone"],
+            contact_email=row["contact_email"],
+            address=row["address"],
+            business_license=row["business_license"],
+            qualifications=row["qualifications"],
+            credit_rating=row["credit_rating"],
+            price_valid_days=row["price_valid_days"],
+            payment_terms=row["payment_terms"],
+            delivery_cycle=row["delivery_cycle"],
+            after_sales=row["after_sales"],
+            warranty_days=row["warranty_days"],
+            status=row["status"],
+            remark=row["remark"],
+            created_at=row["created_at"],
+            updated_at=row["updated_at"],
+        ) for row in rows]
+
+
+def create_supplier_product(product: SupplierProduct) -> int:
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO supplier_products (
+                supplier_id, product_type, title, spec, unit, price, min_order,
+                bulk_discount, delivery_cycle, warranty_days, description, image_url,
+                status, keyword, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            product.supplier_id, product.product_type, product.title, product.spec,
+            product.unit, product.price, product.min_order, product.bulk_discount,
+            product.delivery_cycle, product.warranty_days, product.description,
+            product.image_url, product.status, product.keyword, now, now
+        ))
+        return cursor.lastrowid
+
+
+def get_supplier_product_by_id(product_id: int) -> Optional[SupplierProduct]:
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM supplier_products WHERE id = ?", (product_id,))
+        row = cursor.fetchone()
+        if not row:
+            return None
+        return SupplierProduct(
+            id=row["id"],
+            supplier_id=row["supplier_id"],
+            product_type=row["product_type"],
+            title=row["title"],
+            spec=row["spec"],
+            unit=row["unit"],
+            price=row["price"],
+            min_order=row["min_order"],
+            bulk_discount=row["bulk_discount"],
+            delivery_cycle=row["delivery_cycle"],
+            warranty_days=row["warranty_days"],
+            description=row["description"],
+            image_url=row["image_url"],
+            status=row["status"],
+            keyword=row["keyword"],
+            created_at=row["created_at"],
+            updated_at=row["updated_at"],
+        )
+
+
+def update_supplier_product(product_id: int, **kwargs):
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    with get_db() as conn:
+        cursor = conn.cursor()
+        updates = ["updated_at = ?"]
+        params = [now]
+        for key, value in kwargs.items():
+            if key in ("supplier_id", "product_type", "title", "spec", "unit", "price", "min_order",
+                       "bulk_discount", "delivery_cycle", "warranty_days", "description",
+                       "image_url", "status", "keyword"):
+                updates.append(f"{key} = ?")
+                params.append(value)
+        params.append(product_id)
+        cursor.execute(f"UPDATE supplier_products SET {', '.join(updates)} WHERE id = ?", params)
+
+
+def get_supplier_products(supplier_id: int = None, product_type: str = None,
+                          keyword: str = None, limit: int = 100) -> List[SupplierProduct]:
+    with get_db() as conn:
+        cursor = conn.cursor()
+        query = "SELECT * FROM supplier_products WHERE status = 'active'"
+        params = []
+        if supplier_id:
+            query += " AND supplier_id = ?"
+            params.append(supplier_id)
+        if product_type:
+            query += " AND product_type = ?"
+            params.append(product_type)
+        if keyword:
+            query += " AND (title LIKE ? OR spec LIKE ? OR keyword LIKE ?)"
+            params.extend([f"%{keyword}%", f"%{keyword}%", f"%{keyword}%"])
+        query += " ORDER BY price ASC LIMIT ?"
+        params.append(limit)
+        cursor.execute(query, params)
+        rows = cursor.fetchall()
+        return [SupplierProduct(
+            id=row["id"],
+            supplier_id=row["supplier_id"],
+            product_type=row["product_type"],
+            title=row["title"],
+            spec=row["spec"],
+            unit=row["unit"],
+            price=row["price"],
+            min_order=row["min_order"],
+            bulk_discount=row["bulk_discount"],
+            delivery_cycle=row["delivery_cycle"],
+            warranty_days=row["warranty_days"],
+            description=row["description"],
+            image_url=row["image_url"],
+            status=row["status"],
+            keyword=row["keyword"],
+            created_at=row["created_at"],
+            updated_at=row["updated_at"],
+        ) for row in rows]
+
+
+def create_rfq(rfq: RFQRecord) -> int:
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO rfq_records (
+                user_id, product_type, title, spec, quantity, unit, expected_price,
+                delivery_requirement, status, assigned_supplier_id, supplier_quote,
+                quote_response, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            rfq.user_id, rfq.product_type, rfq.title, rfq.spec, rfq.quantity,
+            rfq.unit, rfq.expected_price, rfq.delivery_requirement, rfq.status,
+            rfq.assigned_supplier_id, rfq.supplier_quote, rfq.quote_response, now, now
+        ))
+        return cursor.lastrowid
+
+
+def get_rfq_by_id(rfq_id: int) -> Optional[RFQRecord]:
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM rfq_records WHERE id = ?", (rfq_id,))
+        row = cursor.fetchone()
+        if not row:
+            return None
+        return RFQRecord(
+            id=row["id"],
+            user_id=row["user_id"],
+            product_type=row["product_type"],
+            title=row["title"],
+            spec=row["spec"],
+            quantity=row["quantity"],
+            unit=row["unit"],
+            expected_price=row["expected_price"],
+            delivery_requirement=row["delivery_requirement"],
+            status=row["status"],
+            assigned_supplier_id=row["assigned_supplier_id"],
+            supplier_quote=row["supplier_quote"],
+            quote_response=row["quote_response"],
+            created_at=row["created_at"],
+            updated_at=row["updated_at"],
+        )
+
+
+def update_rfq(rfq_id: int, **kwargs):
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    with get_db() as conn:
+        cursor = conn.cursor()
+        updates = ["updated_at = ?"]
+        params = [now]
+        for key, value in kwargs.items():
+            if key in ("product_type", "title", "spec", "quantity", "unit", "expected_price",
+                       "delivery_requirement", "status", "assigned_supplier_id",
+                       "supplier_quote", "quote_response"):
+                updates.append(f"{key} = ?")
+                params.append(value)
+        params.append(rfq_id)
+        cursor.execute(f"UPDATE rfq_records SET {', '.join(updates)} WHERE id = ?", params)
+
+
+def get_rfq_records(user_id: int = None, status: str = None, limit: int = 50) -> List[RFQRecord]:
+    with get_db() as conn:
+        cursor = conn.cursor()
+        query = "SELECT * FROM rfq_records"
+        params = []
+        conditions = []
+        if user_id:
+            conditions.append("user_id = ?")
+            params.append(user_id)
+        if status:
+            conditions.append("status = ?")
+            params.append(status)
+        if conditions:
+            query += " WHERE " + " AND ".join(conditions)
+        query += " ORDER BY created_at DESC LIMIT ?"
+        params.append(limit)
+        cursor.execute(query, params)
+        rows = cursor.fetchall()
+        return [RFQRecord(
+            id=row["id"],
+            user_id=row["user_id"],
+            product_type=row["product_type"],
+            title=row["title"],
+            spec=row["spec"],
+            quantity=row["quantity"],
+            unit=row["unit"],
+            expected_price=row["expected_price"],
+            delivery_requirement=row["delivery_requirement"],
+            status=row["status"],
+            assigned_supplier_id=row["assigned_supplier_id"],
+            supplier_quote=row["supplier_quote"],
+            quote_response=row["quote_response"],
+            created_at=row["created_at"],
+            updated_at=row["updated_at"],
+        ) for row in rows]

@@ -284,9 +284,13 @@ def create_app():
         data = request.get_json() or {}
         username = data.get("username", "").strip()
         password = data.get("password", "").strip()
+        role = data.get("role", "").strip()
 
         if not username or not password:
             return jsonify({"error": "用户名或密码不能为空"}), 400
+
+        if role and role not in ("buyer", "supplier", "admin"):
+            return jsonify({"error": "无效的角色类型"}), 400
 
         user = database.get_user_by_username(username)
         if not user:
@@ -297,6 +301,10 @@ def create_app():
 
         if user.status != "active":
             return jsonify({"error": "账号已停用"}), 403
+
+        if role and user.role != role:
+            role_names = {"buyer": "采购人", "supplier": "供应商", "admin": "管理员"}
+            return jsonify({"error": f"该账号不是{role_names.get(role, role)}账号，请选择正确的登录入口"}), 401
 
         token = generate_jwt(user.id, user.username, user.role)
         return jsonify({

@@ -335,7 +335,7 @@
                 const resp = await fetch(`${API_BASE}/api/auth/login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
+                    body: JSON.stringify({ username, password, role })
                 });
                 const data = await resp.json();
 
@@ -345,8 +345,6 @@
                     const userRole = data.user.role;
                     if (userRole === 'admin') {
                         window.location.href = API_BASE + '/admin';
-                    } else if (userRole === 'supplier') {
-                        window.location.href = API_BASE + '/supplier';
                     } else {
                         window.location.href = API_BASE + '/';
                     }

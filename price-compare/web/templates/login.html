@@ -345,6 +345,8 @@
                     const userRole = data.user.role;
                     if (userRole === 'admin') {
                         window.location.href = API_BASE + '/admin';
+                    } else if (userRole === 'supplier') {
+                        window.location.href = API_BASE + '/supplier';
                     } else {
                         window.location.href = API_BASE + '/';
                     }

@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>供应商管理后台 - 绿通采购货物比价参考平台</title>
+    <link rel="stylesheet" href="/bijia/static/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="header-inner">
+                <div class="header-top">
+                    <div class="logo-section">
+                        <div class="logo-icon" onclick="window.location.href='/bijia/'">
+                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M3 20h18v-9l-9-5-9 5v9z" fill="none" stroke="white" stroke-width="2" stroke-linejoin="round"/>
+                                <path d="M9 20v-5h6v5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </div>
+                        <div class="logo-text">
+                            <h1>供应商管理后台</h1>
+                            <p id="supplierName">管理我的货物与服务</p>
+                        </div>
+                    </div>
+                    <div class="header-actions" id="headerActions">
+                        <button class="upload-btn" onclick="window.location.href='/bijia/'">
+                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            返回比价
+                        </button>
+                        <div class="user-menu" onclick="toggleUserDropdown(event)">
+                            <div class="user-avatar" id="userAvatar">U</div>
+                            <div class="user-info">
+                                <span class="user-name" id="userName">用户</span>
+                                <span class="user-role">供应商</span>
+                            </div>
+                            <svg class="user-dropdown-arrow" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <polyline points="6 9 12 15 18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            <div class="user-dropdown" id="userDropdown">
+                                <div class="dropdown-item" onclick="handleLogout()">
+                                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                        <polyline points="16 17 21 12 16 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                        <line x1="21" y1="12" x2="9" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                                    </svg>
+                                    退出登录
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <!-- 统计卡片 -->
+            <div class="stats-grid" id="statsGrid">
+                <div class="stat-card">
+                    <div class="stat-icon goods-icon">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-value" id="goodsCount">0</span>
+                        <span class="stat-label">货物商品</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon service-icon">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-value" id="serviceCount">0</span>
+                        <span class="stat-label">服务项目</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon price-icon">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-value" id="avgPrice">0</span>
+                        <span class="stat-label">平均价格</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon total-icon">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M9 11l3 3L22 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-value" id="totalCount">0</span>
+                        <span class="stat-label">商品总数</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 筛选和操作栏 -->
+            <div class="category-filters">
+                <div class="filter-section">
+                    <label class="filter-label">类型</label>
+                    <select class="filter-select" id="productType" onchange="loadCategories()">
+                        <option value="">全部</option>
+                        <option value="goods">货物</option>
+                        <option value="service">服务</option>
+                    </select>
+                </div>
+                <div class="filter-section">
+                    <label class="filter-label">一级分类</label>
+                    <select class="filter-select" id="mainCategory" onchange="loadSubCategories()">
+                        <option value="">全部</option>
+                    </select>
+                </div>
+                <div class="filter-section">
+                    <label class="filter-label">二级分类</label>
+                    <select class="filter-select" id="subCategory">
+                        <option value="">全部</option>
+                    </select>
+                </div>
+                <div class="filter-section filter-search">
+                    <input type="text" id="searchKeyword" placeholder="搜索商品名称..." onkeydown="if(event.key==='Enter') loadProducts()">
+                    <button class="search-btn-sm" onclick="loadProducts()">搜索</button>
+                </div>
+                <div class="filter-actions">
+                    <button class="btn btn-secondary" onclick="resetFilters()">重置</button>
+                    <button class="btn btn-primary" onclick="showEditModal()">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:16px;height:16px;vertical-align:middle;margin-right:4px;">
+                            <path d="M12 5v14M5 12h14" stroke="white" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                        添加商品
+                    </button>
+                </div>
+            </div>
+
+            <!-- 商品列表 -->
+            <div class="panel">
+                <div class="panel-header">
+                    <div class="panel-title">
+                        <svg class="panel-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        我的商品列表
+                        <span class="panel-count" id="productCount">0</span>
+                    </div>
+                </div>
+                <div class="product-list" id="productList">
+                    <div class="loading-state">
+                        <div class="loading-spinner"></div>
+                        <p>加载中...</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="empty-state" id="emptyState" style="display: none;">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <p>暂无商品数据</p>
+                <p class="empty-hint">点击"添加商品"开始录入您的货物或服务</p>
+            </div>
+        </main>
+    </div>
+
+    <!-- 编辑/添加商品弹窗 -->
+    <div class="modal" id="editModal" style="display:none;">
+        <div class="modal-backdrop" onclick="closeEditModal()"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title-wrap">
+                    <div class="modal-icon">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 id="modalTitle">添加商品</h3>
+                        <p>录入货物或服务信息</p>
+                    </div>
+                </div>
+                <button class="modal-close" onclick="closeEditModal()">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="editForm" onsubmit="saveProduct(event)">
+                    <input type="hidden" id="editProductId">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">商品类型 <span class="form-required">*</span></label>
+                            <select id="editProductType" onchange="loadEditCategories()">
+                                <option value="goods">货物</option>
+                                <option value="service">服务</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">商品名称 <span class="form-required">*</span></label>
+                            <input type="text" id="editTitle" placeholder="请输入商品名称" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">一级分类</label>
+                            <select id="editMainCategory" onchange="loadEditSubCategories()">
+                                <option value="">请选择</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">二级分类</label>
+                            <select id="editSubCategory">
+                                <option value="">请选择</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">规格型号</label>
+                            <input type="text" id="editSpec" placeholder="如：100个/箱">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">单位</label>
+                            <input type="text" id="editUnit" placeholder="如：台、箱、年">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">价格 (元) <span class="form-required">*</span></label>
+                            <input type="number" id="editPrice" step="0.01" placeholder="0.00" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">最小起订量</label>
+                            <input type="number" id="editMinOrder" value="1" min="1">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">批量折扣</label>
+                            <input type="text" id="editBulkDiscount" placeholder="如：10台以上95折">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">交货周期</label>
+                            <input type="text" id="editDeliveryCycle" placeholder="如：3-5工作日">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">质保天数</label>
+                            <input type="number" id="editWarrantyDays" value="0" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">状态</label>
+                            <select id="editStatus">
+                                <option value="active">上架</option>
+                                <option value="inactive">下架</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">关键词</label>
+                        <input type="text" id="editKeyword" placeholder="用于搜索匹配，多个用空格分隔">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">商品描述</label>
+                        <textarea id="editDescription" rows="3" placeholder="商品详细描述"></textarea>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" onclick="closeEditModal()">取消</button>
+                        <button type="submit" class="btn btn-primary">保存</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 商品详情弹窗 -->
+    <div class="modal" id="detailModal" style="display:none;" onclick="closeDetailModal()">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3>商品详情</h3>
+                <button class="modal-close" onclick="closeDetailModal()">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body" id="detailBody"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/bijia';
+        let currentUser = null;
+        let categoriesData = {};
+        let allProducts = [];
+
+        async function checkAuth() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                window.location.href = API_BASE + '/login';
+                return false;
+            }
+            try {
+                const resp = await fetch(`${API_BASE}/api/auth/me`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                if (resp.status === 401) {
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('user');
+                    window.location.href = API_BASE + '/login';
+                    return false;
+                }
+                const data = await resp.json();
+                if (data && data.user && data.user.role === 'supplier') {
+                    currentUser = data.user;
+                    document.getElementById('userName').textContent = currentUser.username;
+                    document.getElementById('userAvatar').textContent = currentUser.username?.charAt(0).toUpperCase() || 'U';
+                    if (currentUser.company_name) {
+                        document.getElementById('supplierName').textContent = currentUser.company_name + ' - 管理我的货物与服务';
+                    }
+                    return true;
+                } else {
+                    alert('非供应商账号，请从正确的入口登录');
+                    window.location.href = API_BASE + '/login';
+                    return false;
+                }
+            } catch (e) {
+                window.location.href = API_BASE + '/login';
+                return false;
+            }
+        }
+
+        function toggleUserDropdown(e) {
+            e.stopPropagation();
+            const dropdown = document.getElementById('userDropdown');
+            if (dropdown) dropdown.classList.toggle('show');
+        }
+
+        document.addEventListener('click', () => {
+            const dropdown = document.getElementById('userDropdown');
+            if (dropdown) dropdown.classList.remove('show');
+        });
+
+        function handleLogout() {
+            if (confirm('确定要退出登录吗？')) {
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                window.location.href = API_BASE + '/login';
+            }
+        }
+
+        function getToken() {
+            return localStorage.getItem('token') || '';
+        }
+
+        async function apiFetch(url, options = {}) {
+            const token = getToken();
+            const headers = { ...options.headers };
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+            if (options.body && !headers['Content-Type']) {
+                headers['Content-Type'] = 'application/json';
+            }
+            const resp = await fetch(`${API_BASE}${url}`, { ...options, headers });
+            const data = await resp.json();
+            if (resp.status === 401) {
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                window.location.href = API_BASE + '/login';
+                return null;
+            }
+            return data;
+        }
+
+        async function loadCategories() {
+            const productType = document.getElementById('productType').value;
+            if (!productType) {
+                document.getElementById('mainCategory').innerHTML = '<option value="">全部</option>';
+                document.getElementById('subCategory').innerHTML = '<option value="">全部</option>';
+                return;
+            }
+            try {
+                const resp = await apiFetch(`/api/categories?type=${productType}`);
+                categoriesData = resp.categories || {};
+                const mainCatSelect = document.getElementById('mainCategory');
+                mainCatSelect.innerHTML = '<option value="">全部</option>';
+                Object.keys(categoriesData).forEach(cat => {
+                    const option = document.createElement('option');
+                    option.value = cat;
+                    option.textContent = cat;
+                    mainCatSelect.appendChild(option);
+                });
+                document.getElementById('subCategory').innerHTML = '<option value="">全部</option>';
+            } catch (e) { console.error(e); }
+        }
+
+        function loadSubCategories() {
+            const mainCategory = document.getElementById('mainCategory').value;
+            const subCatSelect = document.getElementById('subCategory');
+            subCatSelect.innerHTML = '<option value="">全部</option>';
+            if (!mainCategory) return;
+            const subs = categoriesData[mainCategory] || [];
+            subs.forEach(sub => {
+                const option = document.createElement('option');
+                option.value = sub;
+                option.textContent = sub;
+                subCatSelect.appendChild(option);
+            });
+        }
+
+        function resetFilters() {
+            document.getElementById('productType').value = '';
+            document.getElementById('mainCategory').innerHTML = '<option value="">全部</option>';
+            document.getElementById('subCategory').innerHTML = '<option value="">全部</option>';
+            document.getElementById('searchKeyword').value = '';
+            loadProducts();
+        }
+
+        async function loadProducts() {
+            const grid = document.getElementById('productList');
+            const emptyState = document.getElementById('emptyState');
+            grid.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div><p>加载中...</p></div>';
+            emptyState.style.display = 'none';
+
+            const params = new URLSearchParams();
+            params.set('limit', '200');
+            const productType = document.getElementById('productType').value;
+            if (productType) params.set('product_type', productType);
+            const mainCategory = document.getElementById('mainCategory').value;
+            if (mainCategory) params.set('main_category', mainCategory);
+            const subCategory = document.getElementById('subCategory').value;
+            if (subCategory) params.set('sub_category', subCategory);
+            const keyword = document.getElementById('searchKeyword').value.trim();
+            if (keyword) params.set('keyword', keyword);
+
+            try {
+                const data = await apiFetch(`/api/supplier-products?${params.toString()}`);
+                if (data && data.products) {
+                    allProducts = data.products;
+                    renderProducts(data.products);
+                    updateStats(data.products);
+                }
+            } catch (e) {
+                grid.innerHTML = '<div class="empty-state"><p>加载失败，请重试</p></div>';
+            }
+        }
+
+        function updateStats(products) {
+            const goods = products.filter(p => p.product_type === 'goods');
+            const services = products.filter(p => p.product_type === 'service');
+            const avgPrice = products.length > 0
+                ? (products.reduce((s, p) => s + parseFloat(p.price || 0), 0) / products.length).toFixed(2)
+                : '0';
+            document.getElementById('goodsCount').textContent = goods.length;
+            document.getElementById('serviceCount').textContent = services.length;
+            document.getElementById('avgPrice').textContent = avgPrice;
+            document.getElementById('totalCount').textContent = products.length;
+            document.getElementById('productCount').textContent = products.length;
+        }
+
+        function renderProducts(products) {
+            const grid = document.getElementById('productList');
+            const emptyState = document.getElementById('emptyState');
+
+            if (!products || products.length === 0) {
+                grid.innerHTML = '';
+                emptyState.style.display = 'block';
+                return;
+            }
+
+            grid.innerHTML = products.map(p => {
+                const typeText = p.product_type === 'service' ? '服务' : '货物';
+                const typeClass = p.product_type === 'service' ? 'tag-service' : 'tag-goods';
+                const statusText = p.status === 'active' ? '上架中' : '已下架';
+                const statusClass = p.status === 'active' ? 'status-active' : 'status-inactive';
+                return `
+                    <div class="product-card">
+                        <div class="product-card-header">
+                            <div class="product-card-info">
+                                <div class="product-tags">
+                                    <span class="tag ${typeClass}">${typeText}</span>
+                                    ${p.main_category ? `<span class="tag tag-category">${p.main_category}</span>` : ''}
+                                    ${p.sub_category ? `<span class="tag tag-sub-category">${p.sub_category}</span>` : ''}
+                                    <span class="tag ${statusClass}">${statusText}</span>
+                                </div>
+                                <h3 class="product-title">${p.title}</h3>
+                                <p class="product-spec">${p.spec || '无规格'}</p>
+                            </div>
+                            <div class="product-card-price">
+                                <span class="price">¥${parseFloat(p.price || 0).toFixed(2)}</span>
+                                <span class="unit">/${p.unit || '件'}</span>
+                            </div>
+                        </div>
+                        <div class="product-card-meta">
+                            <span>起订量：${p.min_order || 1}</span>
+                            <span>交货周期：${p.delivery_cycle || '-'}</span>
+                            <span>质保：${p.warranty_days || 0}天</span>
+                        </div>
+                        <div class="product-card-actions">
+                            <button class="btn btn-sm btn-secondary" onclick="showDetail(${p.id})">详情</button>
+                            <button class="btn btn-sm btn-primary" onclick="editProduct(${p.id})">编辑</button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteProduct(${p.id}, '${p.title.replace(/'/g, "\\'")}')">删除</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function showDetail(productId) {
+            const p = allProducts.find(x => x.id === productId);
+            if (!p) return;
+            const typeText = p.product_type === 'service' ? '服务' : '货物';
+            const statusText = p.status === 'active' ? '上架中' : '已下架';
+            document.getElementById('detailBody').innerHTML = `
+                <div class="detail-section">
+                    <div class="detail-tags">
+                        <span class="tag tag-goods">${typeText}</span>
+                        <span class="tag tag-category">${p.main_category || '未分类'}</span>
+                        ${p.sub_category ? `<span class="tag tag-sub-category">${p.sub_category}</span>` : ''}
+                    </div>
+                    <h2>${p.title}</h2>
+                    <p class="detail-spec">${p.spec || '无规格信息'}</p>
+                    <div class="detail-price">
+                        <span class="price">¥${parseFloat(p.price).toFixed(2)}</span>
+                        <span class="unit">/${p.unit || '件'}</span>
+                    </div>
+                </div>
+                <div class="detail-grid">
+                    <div class="detail-item"><label>最小起订量</label><span>${p.min_order || 1}</span></div>
+                    <div class="detail-item"><label>批量折扣</label><span>${p.bulk_discount || '-'}</span></div>
+                    <div class="detail-item"><label>交货周期</label><span>${p.delivery_cycle || '-'}</span></div>
+                    <div class="detail-item"><label>质保天数</label><span>${p.warranty_days || 0} 天</span></div>
+                    <div class="detail-item"><label>状态</label><span>${statusText}</span></div>
+                    <div class="detail-item"><label>关键词</label><span>${p.keyword || '-'}</span></div>
+                </div>
+                ${p.description ? `<div class="detail-desc"><h4>商品描述</h4><p>${p.description}</p></div>` : ''}
+                <div class="detail-time">
+                    <p>创建时间：${p.created_at || '-'}</p>
+                    <p>更新时间：${p.updated_at || '-'}</p>
+                </div>
+            `;
+            document.getElementById('detailModal').style.display = 'flex';
+        }
+
+        function closeDetailModal() {
+            document.getElementById('detailModal').style.display = 'none';
+        }
+
+        function showEditModal() {
+            document.getElementById('modalTitle').textContent = '添加商品';
+            document.getElementById('editForm').reset();
+            document.getElementById('editProductId').value = '';
+            document.getElementById('editMainCategory').innerHTML = '<option value="">请选择</option>';
+            document.getElementById('editSubCategory').innerHTML = '<option value="">请选择</option>';
+            document.getElementById('editModal').style.display = 'flex';
+        }
+
+        async function editProduct(productId) {
+            const p = allProducts.find(x => x.id === productId);
+            if (!p) return;
+            document.getElementById('modalTitle').textContent = '编辑商品';
+            document.getElementById('editProductId').value = p.id;
+            document.getElementById('editProductType').value = p.product_type || 'goods';
+            document.getElementById('editTitle').value = p.title || '';
+            document.getElementById('editSpec').value = p.spec || '';
+            document.getElementById('editUnit').value = p.unit || '';
+            document.getElementById('editPrice').value = p.price || '';
+            document.getElementById('editMinOrder').value = p.min_order || 1;
+            document.getElementById('editBulkDiscount').value = p.bulk_discount || '';
+            document.getElementById('editDeliveryCycle').value = p.delivery_cycle || '';
+            document.getElementById('editWarrantyDays').value = p.warranty_days || 0;
+            document.getElementById('editStatus').value = p.status || 'active';
+            document.getElementById('editKeyword').value = p.keyword || '';
+            document.getElementById('editDescription').value = p.description || '';
+            await loadEditCategories();
+            if (p.main_category) document.getElementById('editMainCategory').value = p.main_category;
+            if (p.sub_category) {
+                await loadEditSubCategories();
+                document.getElementById('editSubCategory').value = p.sub_category;
+            }
+            document.getElementById('editModal').style.display = 'flex';
+        }
+
+        async function loadEditCategories() {
+            const productType = document.getElementById('editProductType').value;
+            if (!productType) return;
+            try {
+                const resp = await apiFetch(`/api/categories?type=${productType}`);
+                const cats = resp.categories || {};
+                const mainCatSelect = document.getElementById('editMainCategory');
+                mainCatSelect.innerHTML = '<option value="">请选择</option>';
+                Object.keys(cats).forEach(cat => {
+                    const option = document.createElement('option');
+                    option.value = cat;
+                    option.textContent = cat;
+                    mainCatSelect.appendChild(option);
+                });
+                document.getElementById('editSubCategory').innerHTML = '<option value="">请选择</option>';
+            } catch (e) { console.error(e); }
+        }
+
+        async function loadEditSubCategories() {
+            const productType = document.getElementById('editProductType').value;
+            const mainCategory = document.getElementById('editMainCategory').value;
+            if (!mainCategory) return;
+            try {
+                const resp = await apiFetch(`/api/categories?type=${productType}&main_category=${encodeURIComponent(mainCategory)}`);
+                const subs = resp.sub_categories || [];
+                const subCatSelect = document.getElementById('editSubCategory');
+                subCatSelect.innerHTML = '<option value="">请选择</option>';
+                subs.forEach(sub => {
+                    const option = document.createElement('option');
+                    option.value = sub;
+                    option.textContent = sub;
+                    subCatSelect.appendChild(option);
+                });
+            } catch (e) { console.error(e); }
+        }
+
+        async function saveProduct(e) {
+            e.preventDefault();
+            const productId = document.getElementById('editProductId').value;
+            const payload = {
+                product_type: document.getElementById('editProductType').value,
+                title: document.getElementById('editTitle').value.trim(),
+                main_category: document.getElementById('editMainCategory').value,
+                sub_category: document.getElementById('editSubCategory').value,
+                spec: document.getElementById('editSpec').value.trim(),
+                unit: document.getElementById('editUnit').value.trim(),
+                price: parseFloat(document.getElementById('editPrice').value),
+                min_order: parseInt(document.getElementById('editMinOrder').value) || 1,
+                bulk_discount: document.getElementById('editBulkDiscount').value.trim(),
+                delivery_cycle: document.getElementById('editDeliveryCycle').value.trim(),
+                warranty_days: parseInt(document.getElementById('editWarrantyDays').value) || 0,
+                status: document.getElementById('editStatus').value,
+                keyword: document.getElementById('editKeyword').value.trim(),
+                description: document.getElementById('editDescription').value.trim(),
+            };
+
+            try {
+                let data;
+                if (productId) {
+                    data = await apiFetch(`/api/supplier-products/${productId}`, {
+                        method: 'PUT',
+                        body: JSON.stringify(payload)
+                    });
+                } else {
+                    data = await apiFetch(`/api/supplier-products`, {
+                        method: 'POST',
+                        body: JSON.stringify(payload)
+                    });
+                }
+                if (data && data.success) {
+                    closeEditModal();
+                    await loadProducts();
+                } else if (data) {
+                    alert(data.error || '保存失败');
+                }
+            } catch (e) {
+                alert('网络错误，请重试');
+            }
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').style.display = 'none';
+        }
+
+        async function deleteProduct(productId, title) {
+            if (!confirm(`确定要删除商品「${title}」吗？删除后不可恢复。`)) return;
+            try {
+                const data = await apiFetch(`/api/supplier-products/${productId}`, { method: 'DELETE' });
+                if (data && data.success) {
+                    await loadProducts();
+                } else if (data) {
+                    alert(data.error || '删除失败');
+                }
+            } catch (e) {
+                alert('网络错误，请重试');
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', async () => {
+            const isAuthed = await checkAuth();
+            if (isAuthed) {
+                await loadProducts();
+            }
+        });
+    </script>
+</body>
+</html>

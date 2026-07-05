@@ -899,10 +899,14 @@ def update_supplier_product(product_id: int, **kwargs):
 
 def get_supplier_products(supplier_id: int = None, product_type: str = None,
                           main_category: str = None, sub_category: str = None,
-                          keyword: str = None, limit: int = 100) -> List[SupplierProduct]:
+                          keyword: str = None, limit: int = 100,
+                          include_inactive: bool = False) -> List[SupplierProduct]:
     with get_db() as conn:
         cursor = conn.cursor()
-        query = "SELECT * FROM supplier_products WHERE status = 'active'"
+        if include_inactive:
+            query = "SELECT * FROM supplier_products WHERE status != 'deleted'"
+        else:
+            query = "SELECT * FROM supplier_products WHERE status = 'active'"
         params = []
         if supplier_id:
             query += " AND supplier_id = ?"

@@ -728,6 +728,17 @@ function updateHeaderUser() {
         </button>`;
     }
 
+    let supplierBtn = '';
+    if (currentUser.role === 'supplier') {
+        supplierBtn = `<button class="upload-btn" onclick="window.location.href='${API_BASE}/supplier'">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M3 20h18v-9l-9-5-9 5v9z" stroke="white" stroke-width="2" stroke-linejoin="round"/>
+                <path d="M9 20v-5h6v5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            我的商品
+        </button>`;
+    }
+
     const roleText = {
         'admin': '管理员',
         'buyer': '采购人',
@@ -740,6 +751,7 @@ function updateHeaderUser() {
             <span>实时采集</span>
         </div>
         ${adminBtn}
+        ${supplierBtn}
         <button class="upload-btn" onclick="showUploadModal()">
             <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>

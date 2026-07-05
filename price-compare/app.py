@@ -57,6 +57,10 @@ def create_app():
     def admin_page():
         return render_template("admin.html")
 
+    @app.route("/supplier")
+    def supplier_page():
+        return render_template("supplier.html")
+
     @app.route("/supplier-products")
     def supplier_products_page():
         return render_template("supplier_products.html")
@@ -575,6 +579,7 @@ def create_app():
         if auth_check:
             return auth_check
 
+        user = get_current_user()
         supplier_id = request.args.get("supplier_id")
         supplier_id = int(supplier_id) if supplier_id else None
         product_type = request.args.get("product_type") or None
@@ -583,6 +588,15 @@ def create_app():
         keyword = request.args.get("keyword") or None
         limit = int(request.args.get("limit", 100))
 
+        # 供应商只能查看自己的商品
+        if user.role == "supplier":
+            if not user.supplier_id:
+                return jsonify({"products": []})
+            supplier_id = user.supplier_id
+
+        # 供应商和管理员可以看到下架商品
+        include_inactive = user.role in ("supplier", "admin")
+
         products = database.get_supplier_products(
             supplier_id=supplier_id,
             product_type=product_type,
@@ -590,6 +604,7 @@ def create_app():
             sub_category=sub_category,
             keyword=keyword,
             limit=limit,
+            include_inactive=include_inactive,
         )
 
         suppliers = database.get_suppliers(limit=200)
@@ -605,13 +620,27 @@ def create_app():
 
     @app.route("/api/supplier-products", methods=["POST"])
     def api_supplier_products_create():
-        auth_check = require_auth("admin")
+        auth_check = require_auth()
         if auth_check:
             return auth_check
 
+        user = get_current_user()
         data = request.get_json() or {}
+
+        # 供应商只能给自己的supplier_id添加商品，管理员可以指定任意供应商
+        if user.role == "supplier":
+            if not user.supplier_id:
+                return jsonify({"error": "未绑定供应商信息，无法添加商品"}), 403
+            target_supplier_id = user.supplier_id
+        elif user.role == "admin":
+            target_supplier_id = int(data.get("supplier_id", 0))
+            if not target_supplier_id:
+                return jsonify({"error": "请选择供应商"}), 400
+        else:
+            return jsonify({"error": "无权添加供应商商品"}), 403
+
         product = SupplierProduct(
-            supplier_id=int(data.get("supplier_id", 0)),
+            supplier_id=target_supplier_id,
             product_type=data.get("product_type", "goods"),
             main_category=data.get("main_category", ""),
             sub_category=data.get("sub_category", ""),
@@ -636,25 +665,47 @@ def create_app():
         if auth_check:
             return auth_check
 
+        user = get_current_user()
         product = database.get_supplier_product_by_id(product_id)
         if not product:
             return jsonify({"error": "商品不存在"}), 404
+
+        # 供应商只能查看自己的商品
+        if user.role == "supplier" and product.supplier_id != user.supplier_id:
+            return jsonify({"error": "无权查看此商品"}), 403
+
         return jsonify({"product": product.to_dict()})
 
     @app.route("/api/supplier-products/<int:product_id>", methods=["PUT"])
     def api_supplier_products_update(product_id):
-        auth_check = require_auth("admin")
+        auth_check = require_auth()
         if auth_check:
             return auth_check
 
+        user = get_current_user()
+        product = database.get_supplier_product_by_id(product_id)
+        if not product:
+            return jsonify({"error": "商品不存在"}), 404
+
+        # 供应商只能修改自己的商品
+        if user.role == "supplier" and product.supplier_id != user.supplier_id:
+            return jsonify({"error": "无权修改此商品"}), 403
+
+        if user.role not in ("admin", "supplier"):
+            return jsonify({"error": "无权修改供应商商品"}), 403
+
         data = request.get_json() or {}
         update_fields = {}
-        for field in ["supplier_id", "product_type", "main_category", "sub_category",
+        for field in ["product_type", "main_category", "sub_category",
                       "title", "spec", "unit", "price", "min_order",
                       "bulk_discount", "delivery_cycle", "warranty_days", "description",
                       "image_url", "status", "keyword"]:
             if field in data:
                 update_fields[field] = data[field]
+
+        # 管理员可以修改supplier_id，供应商不能
+        if user.role == "admin" and "supplier_id" in data:
+            update_fields["supplier_id"] = data["supplier_id"]
 
         database.update_supplier_product(product_id, **update_fields)
         product = database.get_supplier_product_by_id(product_id)
@@ -662,9 +713,21 @@ def create_app():
 
     @app.route("/api/supplier-products/<int:product_id>", methods=["DELETE"])
     def api_supplier_products_delete(product_id):
-        auth_check = require_auth("admin")
+        auth_check = require_auth()
         if auth_check:
             return auth_check
+
+        user = get_current_user()
+        product = database.get_supplier_product_by_id(product_id)
+        if not product:
+            return jsonify({"error": "商品不存在"}), 404
+
+        # 供应商只能删除自己的商品
+        if user.role == "supplier" and product.supplier_id != user.supplier_id:
+            return jsonify({"error": "无权删除此商品"}), 403
+
+        if user.role not in ("admin", "supplier"):
+            return jsonify({"error": "无权删除供应商商品"}), 403
 
         database.update_supplier_product(product_id, status="deleted")
         return jsonify({"success": True})

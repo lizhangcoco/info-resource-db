@@ -1938,7 +1938,7 @@ textarea:focus {
 .role-selector {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
+    gap: 12px;
     margin-bottom: 28px;
 }
 
@@ -1946,54 +1946,97 @@ textarea:focus {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 8px;
-    padding: 16px 8px;
-    background: var(--bg-input);
-    border: 2px solid var(--border-color);
-    border-radius: var(--radius-md);
+    gap: 10px;
+    padding: 20px 12px;
+    border-radius: var(--radius-lg);
     cursor: pointer;
     transition: all 0.25s ease;
     text-align: center;
+    border: 2px solid transparent;
+}
+
+.role-card.login-card {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.18) 0%, rgba(139, 92, 246, 0.08) 100%);
+    border-color: rgba(99, 102, 241, 0.3);
+}
+
+.role-card.buyer-card {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.18) 0%, rgba(37, 99, 235, 0.08) 100%);
+    border-color: rgba(59, 130, 246, 0.3);
+}
+
+.role-card.supplier-card {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.18) 0%, rgba(5, 150, 105, 0.08) 100%);
+    border-color: rgba(16, 185, 129, 0.3);
 }
 
 .role-card:hover {
-    border-color: var(--accent-primary);
-    background: rgba(99, 102, 241, 0.05);
-    transform: translateY(-2px);
+    transform: translateY(-3px);
+}
+
+.role-card.login-card:hover {
+    border-color: rgba(99, 102, 241, 0.6);
+    box-shadow: 0 6px 20px rgba(99, 102, 241, 0.3);
+}
+
+.role-card.buyer-card:hover {
+    border-color: rgba(59, 130, 246, 0.6);
+    box-shadow: 0 6px 20px rgba(59, 130, 246, 0.3);
+}
+
+.role-card.supplier-card:hover {
+    border-color: rgba(16, 185, 129, 0.6);
+    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.3);
 }
 
 .role-card.active {
+    transform: translateY(-3px);
+}
+
+.role-card.login-card.active {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.35) 0%, rgba(139, 92, 246, 0.15) 100%);
     border-color: var(--accent-primary);
-    background: rgba(99, 102, 241, 0.12);
-    box-shadow: 0 4px 16px rgba(99, 102, 241, 0.2);
+    box-shadow: 0 8px 24px rgba(99, 102, 241, 0.4);
+}
+
+.role-card.buyer-card.active {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.35) 0%, rgba(37, 99, 235, 0.15) 100%);
+    border-color: var(--accent-blue);
+    box-shadow: 0 8px 24px rgba(59, 130, 246, 0.4);
+}
+
+.role-card.supplier-card.active {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.35) 0%, rgba(5, 150, 105, 0.15) 100%);
+    border-color: var(--accent-green);
+    box-shadow: 0 8px 24px rgba(16, 185, 129, 0.4);
 }
 
 .role-icon {
-    width: 40px;
-    height: 40px;
-    border-radius: 12px;
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
 .role-icon svg {
-    width: 22px;
-    height: 22px;
+    width: 24px;
+    height: 24px;
 }
 
 .role-icon.login-icon {
-    background: rgba(99, 102, 241, 0.15);
+    background: rgba(99, 102, 241, 0.3);
     color: var(--accent-primary);
 }
 
 .role-icon.buyer-icon {
-    background: rgba(59, 130, 246, 0.15);
+    background: rgba(59, 130, 246, 0.3);
     color: var(--accent-blue);
 }
 
 .role-icon.supplier-icon {
-    background: rgba(16, 185, 129, 0.15);
+    background: rgba(16, 185, 129, 0.3);
     color: var(--accent-green);
 }
 
@@ -2015,23 +2058,38 @@ textarea:focus {
 .role-info {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 4px;
 }
 
 .role-name {
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 700;
-    color: var(--text-primary);
+}
+
+.role-card.login-card .role-name {
+    color: #c7d2fe;
+}
+
+.role-card.buyer-card .role-name {
+    color: #bfdbfe;
+}
+
+.role-card.supplier-card .role-name {
+    color: #86efac;
 }
 
 .role-card.active .role-name {
-    color: var(--accent-primary);
+    color: white;
 }
 
 .role-desc {
     font-size: 11px;
     color: var(--text-tertiary);
     line-height: 1.4;
+}
+
+.role-card.active .role-desc {
+    color: rgba(255, 255, 255, 0.7);
 }
 
 /* Register Banner */

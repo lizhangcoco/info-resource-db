@@ -5,7 +5,12 @@ import time
 from typing import List
 from urllib.parse import quote, urlencode
 
-from playwright.sync_api import sync_playwright
+try:
+    from playwright.sync_api import sync_playwright
+    PLAYWRIGHT_AVAILABLE = True
+except ImportError:
+    PLAYWRIGHT_AVAILABLE = False
+    sync_playwright = None
 
 from collectors.base import BaseCollector
 from storage.models import Product
@@ -413,6 +418,8 @@ class PinduoduoCollector(BaseCollector):
 
 
 def get_real_collectors(platforms: List[str] = None) -> List[BaseCollector]:
+    if not PLAYWRIGHT_AVAILABLE:
+        return []
     if platforms is None:
         platforms = ["jd", "taobao", "pinduoduo"]
     m = {"jd": JDCollector, "taobao": TaobaoCollector, "pinduoduo": PinduoduoCollector}

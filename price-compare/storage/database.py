@@ -169,6 +169,93 @@ def init_db():
         except Exception:
             pass
 
+        cursor.execute("SELECT COUNT(*) as cnt FROM users WHERE role = 'admin'")
+        admin_count = cursor.fetchone()["cnt"]
+        if admin_count == 0:
+            import bcrypt
+            from datetime import datetime
+            now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            password_hash = bcrypt.hashpw("admin123".encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+            cursor.execute("""
+                INSERT INTO users (username, password_hash, email, phone, role, company_name, status, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                "admin", password_hash, "admin@bijia.com", "13800138000",
+                "admin", "系统管理员", "active", now, now
+            ))
+
+        cursor.execute("SELECT COUNT(*) as cnt FROM suppliers")
+        supplier_count = cursor.fetchone()["cnt"]
+        if supplier_count == 0:
+            from datetime import datetime
+            now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+            sample_suppliers = [
+                ("深圳华强电子有限公司", "张经理", "13800138001", "zhang@huaqiang.com",
+                 "深圳市福田区华强北路", "91440300MA5D8XXXXX", "ISO9001, CE, RoHS",
+                 "A", 30, "月结30天", "3-5工作日", "7天无理由退换", 365, "approved", "长期合作供应商"),
+                ("广州办公用品批发中心", "李主任", "13800138002", "li@gzbangong.com",
+                 "广州市天河区珠江新城", "91440100MA59GXXXXX", "ISO9001",
+                 "A", 15, "货到付款", "1-2工作日", "质量问题包换", 180, "approved", "办公耗材定点供应商"),
+                ("上海工业设备制造有限公司", "王总", "13800138003", "wang@shanghai-industry.com",
+                 "上海市浦东新区张江高科", "91310000MA1FLXXXXX", "ISO9001, ISO14001",
+                 "B", 45, "预付30%发货前付清", "15-30工作日", "质保一年", 365, "approved", "大型设备供应商"),
+            ]
+
+            supplier_ids = []
+            for s in sample_suppliers:
+                cursor.execute("""
+                    INSERT INTO suppliers (name, contact_name, contact_phone, contact_email, address,
+                        business_license, qualifications, credit_rating, price_valid_days,
+                        payment_terms, delivery_cycle, after_sales, warranty_days, status, remark,
+                        created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, s + (now, now))
+                supplier_ids.append(cursor.lastrowid)
+
+            sample_products = [
+                dict(supplier_id=supplier_ids[0], product_type="goods",
+                     title="iPhone 15 Pro 256G 钛金属原色", spec="256GB 钛金属原色 美版无锁", unit="台",
+                     price=7999.00, min_order=1, bulk_discount="10台以上95折",
+                     delivery_cycle="2-3工作日", warranty_days=365,
+                     description="全新原装正品，全国联保", image_url="", keyword="iPhone 15 Pro"),
+                dict(supplier_id=supplier_ids[0], product_type="goods",
+                     title="华为 Mate 60 Pro 12+512G", spec="12GB+512GB 雅川青 全网通", unit="台",
+                     price=6999.00, min_order=1, bulk_discount="5台以上98折",
+                     delivery_cycle="1-2工作日", warranty_days=365,
+                     description="全新国行，官方联保", image_url="", keyword="华为 Mate 60 Pro"),
+                dict(supplier_id=supplier_ids[0], product_type="goods",
+                     title="小米14 Ultra 16+512G", spec="16GB+512GB 黑色 徕卡光学", unit="台",
+                     price=6499.00, min_order=1, bulk_discount="10台以上95折",
+                     delivery_cycle="2-3工作日", warranty_days=365,
+                     description="全新正品，官方保修", image_url="", keyword="小米14 Ultra"),
+                dict(supplier_id=supplier_ids[1], product_type="goods",
+                     title="A4打印纸 70g 500张/包", spec="70g 500张/包 10包/箱", unit="箱",
+                     price=198.00, min_order=1, bulk_discount="10箱以上9折",
+                     delivery_cycle="当日达", warranty_days=0,
+                     description="高白度复印纸，办公专用", image_url="", keyword="A4打印纸"),
+                dict(supplier_id=supplier_ids[1], product_type="goods",
+                     title="得力中性笔 0.5mm 黑色 12支装", spec="0.5mm 黑色 12支/盒", unit="盒",
+                     price=15.80, min_order=1, bulk_discount="50盒以上85折",
+                     delivery_cycle="当日达", warranty_days=0,
+                     description="顺滑书写，办公首选", image_url="", keyword="中性笔"),
+                dict(supplier_id=supplier_ids[2], product_type="goods",
+                     title="工业级3D打印机 FDM高精度", spec="打印尺寸300*300*400mm 精度±0.1mm", unit="台",
+                     price=15800.00, min_order=1, bulk_discount="2台以上9折",
+                     delivery_cycle="20-25工作日", warranty_days=730,
+                     description="工业级高精度，支持多种材料", image_url="", keyword="3D打印机"),
+            ]
+
+            for p in sample_products:
+                cursor.execute("""
+                    INSERT INTO supplier_products (supplier_id, product_type, title, spec, unit, price,
+                        min_order, bulk_discount, delivery_cycle, warranty_days, description,
+                        image_url, status, keyword, created_at, updated_at)
+                    VALUES (:supplier_id, :product_type, :title, :spec, :unit, :price,
+                        :min_order, :bulk_discount, :delivery_cycle, :warranty_days, :description,
+                        :image_url, 'active', :keyword, :created_at, :updated_at)
+                """, {**p, "created_at": now, "updated_at": now})
+
 
 def is_db_initialized() -> bool:
     if not os.path.exists(DB_PATH):

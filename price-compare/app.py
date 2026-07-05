@@ -388,6 +388,8 @@ def create_app():
             update_fields["status"] = data["status"]
         if "member_expire_at" in data:
             update_fields["member_expire_at"] = data["member_expire_at"]
+        if "password" in data and data["password"]:
+            update_fields["password_hash"] = generate_password_hash(data["password"])
 
         database.update_user(user_id, **update_fields)
         user = database.get_user_by_id(user_id)
@@ -475,6 +477,34 @@ def create_app():
         supplier = database.get_supplier_by_id(supplier_id)
         return jsonify({"success": True, "supplier": supplier.to_dict()})
 
+    @app.route("/api/supplier-products", methods=["GET"])
+    def api_supplier_products_list():
+        auth_check = require_auth()
+        if auth_check:
+            return auth_check
+
+        supplier_id = request.args.get("supplier_id")
+        supplier_id = int(supplier_id) if supplier_id else None
+        keyword = request.args.get("keyword") or None
+        limit = int(request.args.get("limit", 100))
+
+        products = database.get_supplier_products(
+            supplier_id=supplier_id,
+            keyword=keyword,
+            limit=limit,
+        )
+
+        suppliers = database.get_suppliers(limit=200)
+        supplier_map = {s.id: s.name for s in suppliers}
+
+        result = []
+        for p in products:
+            d = p.to_dict()
+            d["supplier_name"] = supplier_map.get(p.supplier_id, "")
+            result.append(d)
+
+        return jsonify({"products": result})
+
     @app.route("/api/supplier-products", methods=["POST"])
     def api_supplier_products_create():
         auth_check = require_auth("admin")
@@ -499,6 +529,17 @@ def create_app():
         )
         product_id = database.create_supplier_product(product)
         return jsonify({"success": True, "product": database.get_supplier_product_by_id(product_id).to_dict()})
+
+    @app.route("/api/supplier-products/<int:product_id>", methods=["GET"])
+    def api_supplier_products_get(product_id):
+        auth_check = require_auth()
+        if auth_check:
+            return auth_check
+
+        product = database.get_supplier_product_by_id(product_id)
+        if not product:
+            return jsonify({"error": "商品不存在"}), 404
+        return jsonify({"product": product.to_dict()})
 
     @app.route("/api/supplier-products/<int:product_id>", methods=["PUT"])
     def api_supplier_products_update(product_id):

@@ -4,7 +4,7 @@ import bcrypt
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
 
-SECRET_KEY = os.environ.get("BIJIA_SECRET_KEY", "bijia-secret-key-2024-01")
+SECRET_KEY = os.environ.get("BIJIA_SECRET_KEY", "bijia-secret-key-2024-01-very-long-and-secure-key-for-hs256")
 JWT_EXPIRE_HOURS = 24
 
 

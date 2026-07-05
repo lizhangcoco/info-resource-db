@@ -745,6 +745,7 @@ body::before {
 .tag.taobao { background: rgba(255, 80, 0, 0.15); color: #ff8c42; }
 .tag.pinduoduo { background: rgba(224, 46, 36, 0.15); color: #ff6b6b; }
 .tag.custom { background: rgba(16, 185, 129, 0.15); color: #34d399; }
+.tag.supplier { background: rgba(139, 92, 246, 0.15); color: #a78bfa; }
 .tag.recommend { background: rgba(16, 185, 129, 0.15); color: #34d399; }
 
 .product-title {

@@ -5,6 +5,7 @@ let trendChart = null;
 let searchPollingTimer = null;
 let manualProducts = [];
 let currentUploadTab = 'json';
+let currentUser = null;
 
 const getApiBase = () => {
     if (window.APP_ROOT && window.APP_ROOT !== '') {
@@ -20,18 +21,41 @@ const getApiBase = () => {
 
 const API_BASE = getApiBase();
 
+function getToken() {
+    return localStorage.getItem('token') || '';
+}
+
+async function apiFetch(url, options = {}) {
+    const token = getToken();
+    const headers = {
+        'Content-Type': 'application/json',
+        ...(options.headers || {})
+    };
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+    const resp = await fetch(API_BASE + url, { ...options, headers });
+    if (resp.status === 401) {
+        window.location.href = API_BASE + '/login';
+        return null;
+    }
+    return await resp.json();
+}
+
 const PLATFORM_NAMES = {
     jd: '京东',
     taobao: '淘宝',
     pinduoduo: '拼多多',
-    custom: '自定义'
+    custom: '自定义',
+    supplier: '供应商'
 };
 
 const PLATFORM_COLORS = {
     jd: '#e1251b',
     taobao: '#ff5000',
     pinduoduo: '#e02e24',
-    custom: '#10b981'
+    custom: '#10b981',
+    supplier: '#8b5cf6'
 };
 
 const PRODUCT_ICONS = {
@@ -100,6 +124,11 @@ function quickSearch(keyword) {
 }
 
 async function doSearch() {
+    if (!currentUser) {
+        window.location.href = API_BASE + '/login';
+        return;
+    }
+
     const keyword = document.getElementById('keywordInput').value.trim();
     if (!keyword) {
         alert('请输入搜索关键词');
@@ -126,12 +155,12 @@ async function doSearch() {
     clearInterval(searchPollingTimer);
 
     try {
-        const res = await fetch(API_BASE + '/api/search', {
+        const data = await apiFetch('/api/search', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ keyword, platforms, limit: 15 })
         });
-        const data = await res.json();
+
+        if (!data) return;
 
         if (data.error) {
             throw new Error(data.error);
@@ -164,8 +193,8 @@ function pollSearchStatus(recordId) {
     searchPollingTimer = setInterval(async () => {
         count++;
         try {
-            const res = await fetch(API_BASE + `/api/search/${recordId}`);
-            const data = await res.json();
+            const data = await apiFetch(`/api/search/${recordId}`);
+            if (!data) { clearInterval(searchPollingTimer); return; }
 
             if (data.progress) {
                 const platforms = Object.keys(data.progress);
@@ -564,10 +593,11 @@ function closeUploadModal() {
 
 async function loadUploadTemplate() {
     try {
-        const res = await fetch(API_BASE + '/api/upload/template');
-        const template = await res.json();
-        document.getElementById('uploadKeyword').value = template.keyword;
-        document.getElementById('uploadData').value = JSON.stringify(template.products, null, 2);
+        const data = await apiFetch('/api/upload/template');
+        if (data) {
+            document.getElementById('uploadKeyword').value = data.keyword;
+            document.getElementById('uploadData').value = JSON.stringify(data.products, null, 2);
+        }
     } catch (e) {
         document.getElementById('uploadResult').innerHTML = '<div class="error">加载模板失败</div>';
     }
@@ -617,13 +647,12 @@ async function submitUploadData() {
     document.getElementById('uploadResult').innerHTML = '<div class="loading">正在导入数据...</div>';
 
     try {
-        const res = await fetch(API_BASE + '/api/upload', {
+        const data = await apiFetch('/api/upload', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ keyword, products })
         });
 
-        const data = await res.json();
+        if (!data) return;
 
         if (data.error) {
             document.getElementById('uploadResult').innerHTML = '<div class="error">导入失败: ' + data.error + '</div>';
@@ -654,11 +683,80 @@ document.addEventListener('keydown', function(e) {
     }
 });
 
-async function initDemo() {
+async function checkAuth() {
     try {
-        const res = await fetch(API_BASE + '/api/keywords');
-        const data = await res.json();
-        if (data.keywords && data.keywords.length > 0) {
+        const data = await apiFetch('/api/auth/me');
+        if (data && data.user) {
+            currentUser = data.user;
+            updateHeaderUser();
+            return true;
+        }
+    } catch (e) {
+        console.error(e);
+    }
+    return false;
+}
+
+function updateHeaderUser() {
+    const actions = document.querySelector('.header-actions');
+    if (!currentUser) {
+        actions.innerHTML = `
+            <div class="header-badge">
+                <span class="badge-dot"></span>
+                <span>实时采集</span>
+            </div>
+            <button class="upload-btn" onclick="window.location.href='${API_BASE}/login'">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <polyline points="10 17 15 12 10 7" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <line x1="15" y1="12" x2="3" y2="12" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                登录
+            </button>
+        `;
+        return;
+    }
+
+    let adminBtn = '';
+    if (currentUser.role === 'admin') {
+        adminBtn = `<button class="upload-btn" onclick="window.location.href='${API_BASE}/admin'">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 15a3 3 0 100-6 3 3 0 000 6z" stroke="white" stroke-width="2"/>
+                <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z" stroke="white" stroke-width="2"/>
+            </svg>
+            管理后台
+        </button>`;
+    }
+
+    actions.innerHTML = `
+        <div class="header-badge">
+            <span class="badge-dot"></span>
+            <span>实时采集</span>
+        </div>
+        ${adminBtn}
+        <button class="upload-btn" onclick="showUploadModal()">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            导入数据
+        </button>
+        <div class="user-menu">
+            <div class="user-avatar">${currentUser.username?.charAt(0).toUpperCase() || 'U'}</div>
+            <div class="user-info">
+                <div class="user-name">${currentUser.username}</div>
+                <div class="user-role">${currentUser.role === 'admin' ? '管理员' : '采购人'}</div>
+            </div>
+        </div>
+    `;
+}
+
+async function initDemo() {
+    const isAuthed = await checkAuth();
+    if (!isAuthed) return;
+
+    try {
+        const data = await apiFetch('/api/keywords');
+        if (data && data.keywords && data.keywords.length > 0) {
             const firstKw = data.keywords[0];
             document.getElementById('keywordInput').value = firstKw;
             loadExistingData(firstKw);
@@ -670,9 +768,8 @@ async function initDemo() {
 
 async function loadExistingData(keyword) {
     try {
-        const res = await fetch(API_BASE + `/api/products?keyword=${encodeURIComponent(keyword)}&order_by=price&sort=asc&limit=50`);
-        const data = await res.json();
-        if (data.products && data.products.length > 0) {
+        const data = await apiFetch(`/api/products?keyword=${encodeURIComponent(keyword)}&order_by=price&sort=asc&limit=50`);
+        if (data && data.products && data.products.length > 0) {
             currentProducts = data.products;
             currentKeyword = keyword;
             renderProducts(data.products);

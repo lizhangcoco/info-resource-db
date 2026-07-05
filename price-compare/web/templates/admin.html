@@ -509,11 +509,16 @@
                 status: document.getElementById('userStatus').value,
             };
             const password = document.getElementById('userPassword').value;
-            if (password) data.password_hash = password;
 
             if (id) {
+                if (password) data.password = password;
                 await fetchData(`/api/users/${id}`, { method: 'PUT', body: JSON.stringify(data) });
             } else {
+                if (!password) {
+                    alert('请输入密码');
+                    return;
+                }
+                data.password = password;
                 await fetchData('/api/auth/register', { method: 'POST', body: JSON.stringify(data) });
             }
             

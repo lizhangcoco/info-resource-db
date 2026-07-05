@@ -1532,6 +1532,18 @@ textarea:focus {
     color: var(--text-primary);
 }
 
+.btn-ghost {
+    background: transparent;
+    border-color: var(--border-color);
+    color: var(--text-secondary);
+}
+
+.btn-ghost:hover {
+    background: var(--bg-hover);
+    border-color: var(--border-hover);
+    color: var(--text-primary);
+}
+
 .btn-primary {
     background: var(--gradient-primary);
     color: white;
@@ -1578,6 +1590,106 @@ textarea:focus {
     color: #60a5fa;
     background: rgba(59, 130, 246, 0.1);
     border: 1px solid rgba(59, 130, 246, 0.25);
+}
+
+/* Import Modal Styles */
+.import-tips {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 16px;
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.import-tips ul {
+    margin: 8px 0 0 20px;
+    line-height: 1.8;
+}
+
+.import-tips .required {
+    color: var(--accent-red);
+    font-weight: 600;
+}
+
+.file-upload-area {
+    border: 2px dashed var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 40px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    background: var(--bg-input);
+}
+
+.file-upload-area:hover {
+    border-color: var(--accent-primary);
+    background: rgba(99, 102, 241, 0.05);
+}
+
+.file-upload-area svg {
+    margin: 0 auto 12px;
+    color: var(--text-tertiary);
+}
+
+.file-upload-area p {
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+}
+
+#importResult {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 16px;
+}
+
+.import-stats {
+    display: flex;
+    gap: 32px;
+    margin-bottom: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.stat-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.stat-label {
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.stat-value {
+    font-size: 24px;
+    font-weight: 700;
+}
+
+.stat-value.success {
+    color: var(--accent-green);
+}
+
+.stat-value.error {
+    color: var(--accent-red);
+}
+
+.import-errors {
+    max-height: 200px;
+    overflow-y: auto;
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.import-errors ul {
+    margin-left: 20px;
+    line-height: 1.6;
+}
+
+.import-errors li {
+    color: var(--accent-red);
 }
 
 /* Responsive */

@@ -330,6 +330,81 @@ def batch_insert_price_history(points: List[PricePoint]):
             """, (point.product_key, point.price, point.collected_at, point.keyword))
 
 
+def get_supplier_by_name(name: str) -> Optional[Supplier]:
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM suppliers WHERE name = ?", (name,))
+        row = cursor.fetchone()
+        if not row:
+            return None
+        return Supplier(
+            id=row["id"],
+            name=row["name"],
+            contact_name=row["contact_name"],
+            contact_phone=row["contact_phone"],
+            contact_email=row["contact_email"],
+            address=row["address"],
+            business_license=row["business_license"],
+            qualifications=row["qualifications"],
+            credit_rating=row["credit_rating"],
+            price_valid_days=row["price_valid_days"],
+            payment_terms=row["payment_terms"],
+            delivery_cycle=row["delivery_cycle"],
+            after_sales=row["after_sales"],
+            warranty_days=row["warranty_days"],
+            status=row["status"],
+            remark=row["remark"],
+            created_at=row["created_at"],
+            updated_at=row["updated_at"],
+        )
+
+
+def batch_insert_supplier_products(products: List[SupplierProduct]) -> Tuple[int, List[str]]:
+    success_count = 0
+    errors = []
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    with get_db() as conn:
+        cursor = conn.cursor()
+        for idx, product in enumerate(products, 1):
+            try:
+                cursor.execute("""
+                    INSERT INTO supplier_products (
+                        supplier_id, product_type, main_category, sub_category,
+                        title, spec, unit, price, min_order,
+                        bulk_discount, delivery_cycle, warranty_days, description, image_url,
+                        status, keyword, created_at, updated_at
+                    ) VALUES (
+                        ?, ?, ?, ?,
+                        ?, ?, ?, ?, ?,
+                        ?, ?, ?, ?, ?,
+                        ?, ?, ?, ?
+                    )
+                """, (
+                    product.supplier_id,
+                    product.product_type,
+                    product.main_category,
+                    product.sub_category,
+                    product.title,
+                    product.spec,
+                    product.unit,
+                    product.price,
+                    product.min_order,
+                    product.bulk_discount,
+                    product.delivery_cycle,
+                    product.warranty_days,
+                    product.description,
+                    product.image_url,
+                    product.status,
+                    product.keyword,
+                    now,
+                    now,
+                ))
+                success_count += 1
+            except Exception as e:
+                errors.append(f"第{idx}行: {str(e)}")
+    return success_count, errors
+
+
 def get_products_by_keyword(keyword: str, platform: str = None, order_by: str = "price",
                             sort: str = "asc", limit: int = 100) -> List[Product]:
     with get_db() as conn:

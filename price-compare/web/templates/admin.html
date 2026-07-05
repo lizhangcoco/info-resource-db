@@ -151,6 +151,23 @@
                         </svg>
                         添加商品
                     </button>
+                    <button class="btn btn-secondary" onclick="showImportModal()">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <polyline points="17 8 12 3 7 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <line x1="12" y1="3" x2="12" y2="15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        批量导入
+                    </button>
+                    <button class="btn btn-ghost" onclick="downloadTemplate()">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke="currentColor" stroke-width="2"/>
+                            <polyline points="14 2 14 8 20 8" stroke="currentColor" stroke-width="2"/>
+                            <line x1="12" y1="18" x2="12" y2="12" stroke="currentColor" stroke-width="2"/>
+                            <polyline points="9 15 12 18 15 15" stroke="currentColor" stroke-width="2"/>
+                        </svg>
+                        下载模板
+                    </button>
                 </div>
                 <div class="data-table-wrap">
                     <table class="data-table" id="productsTable">
@@ -409,6 +426,82 @@
                     <textarea id="quoteResponse" rows="3"></textarea>
                 </div>
                 <button class="btn btn-primary" onclick="submitQuote()">提交报价</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 批量导入弹窗 -->
+    <div id="importModal" class="modal">
+        <div class="modal-backdrop" onclick="closeModal('importModal')"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>批量导入供应商商品</h3>
+                <button class="modal-close" onclick="closeModal('importModal')">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2"/>
+                        <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="import-tips">
+                    <p><strong>导入说明：</strong></p>
+                    <ul>
+                        <li>支持 Excel (.xlsx) 和 CSV 格式文件</li>
+                        <li>带 <span class="required">*</span> 的字段为必填项</li>
+                        <li>供应商名称必须与系统中已有的供应商完全一致</li>
+                        <li>商品类型：goods=货物，service=服务</li>
+                        <li>状态：active=启用，inactive=禁用</li>
+                    </ul>
+                    <button class="btn btn-ghost" onclick="downloadTemplate()" style="margin-top: 12px;">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 16px; height: 16px;">
+                            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke="currentColor" stroke-width="2"/>
+                            <polyline points="14 2 14 8 20 8" stroke="currentColor" stroke-width="2"/>
+                            <line x1="12" y1="18" x2="12" y2="12" stroke="currentColor" stroke-width="2"/>
+                            <polyline points="9 15 12 18 15 15" stroke="currentColor" stroke-width="2"/>
+                        </svg>
+                        下载导入模板
+                    </button>
+                </div>
+                <div class="form-group" style="margin-top: 20px;">
+                    <label class="form-label">选择文件</label>
+                    <div class="file-upload-area" onclick="document.getElementById('importFile').click()">
+                        <input type="file" id="importFile" accept=".xlsx,.xls,.csv" onchange="handleFileSelect(event)" style="display: none;">
+                        <div id="fileUploadPlaceholder">
+                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 48px; height: 48px; opacity: 0.5;">
+                                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" stroke="currentColor" stroke-width="2"/>
+                                <polyline points="17 8 12 3 7 8" stroke="currentColor" stroke-width="2"/>
+                                <line x1="12" y1="3" x2="12" y2="15" stroke="currentColor" stroke-width="2"/>
+                            </svg>
+                            <p>点击选择文件或拖拽文件到此处</p>
+                            <p style="font-size: 12px; opacity: 0.6;">支持 .xlsx, .xls, .csv 格式</p>
+                        </div>
+                        <div id="selectedFileInfo" style="display: none;">
+                            <p id="selectedFileName"></p>
+                            <p style="font-size: 12px; opacity: 0.6;" id="selectedFileSize"></p>
+                        </div>
+                    </div>
+                </div>
+                <div id="importResult" style="display: none; margin-top: 16px;">
+                    <div class="import-stats">
+                        <div class="stat-item">
+                            <span class="stat-label">成功导入</span>
+                            <span class="stat-value success" id="importSuccessCount">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">失败</span>
+                            <span class="stat-value error" id="importErrorCount">0</span>
+                        </div>
+                    </div>
+                    <div id="importErrors" class="import-errors" style="display: none;">
+                        <p style="font-weight: 600; margin-bottom: 8px;">错误详情：</p>
+                        <ul id="importErrorList"></ul>
+                    </div>
+                </div>
+                <div style="margin-top: 24px; display: flex; gap: 12px;">
+                    <button class="btn btn-primary" id="importBtn" onclick="startImport()" disabled>开始导入</button>
+                    <button class="btn btn-ghost" onclick="closeModal('importModal')">取消</button>
+                </div>
             </div>
         </div>
     </div>
@@ -847,6 +940,101 @@
             await fetchData(`/api/rfq/${rfqId}/quote`, { method: 'POST', body: JSON.stringify(data) });
             closeModal('quoteModal');
             loadRFQ();
+        }
+
+        function showImportModal() {
+            document.getElementById('importModal').style.display = 'flex';
+            document.getElementById('importResult').style.display = 'none';
+            document.getElementById('importBtn').disabled = true;
+            document.getElementById('fileUploadPlaceholder').style.display = 'block';
+            document.getElementById('selectedFileInfo').style.display = 'none';
+            document.getElementById('importFile').value = '';
+        }
+
+        function downloadTemplate() {
+            const token = localStorage.getItem('token');
+            const url = `${API_BASE}/api/supplier-products/import/template`;
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = '供应商商品导入模板.xlsx';
+            link.click();
+        }
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const validTypes = ['.xlsx', '.xls', '.csv'];
+            const fileName = file.name.toLowerCase();
+            const isValid = validTypes.some(type => fileName.endsWith(type));
+
+            if (!isValid) {
+                alert('请选择 Excel (.xlsx, .xls) 或 CSV 文件');
+                event.target.value = '';
+                return;
+            }
+
+            document.getElementById('fileUploadPlaceholder').style.display = 'none';
+            document.getElementById('selectedFileInfo').style.display = 'block';
+            document.getElementById('selectedFileName').textContent = file.name;
+            document.getElementById('selectedFileSize').textContent = formatFileSize(file.size);
+            document.getElementById('importBtn').disabled = false;
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        }
+
+        async function startImport() {
+            const fileInput = document.getElementById('importFile');
+            const file = fileInput.files[0];
+            if (!file) return;
+
+            const importBtn = document.getElementById('importBtn');
+            importBtn.disabled = true;
+            importBtn.textContent = '导入中...';
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`${API_BASE}/api/supplier-products/import`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                document.getElementById('importResult').style.display = 'block';
+                document.getElementById('importSuccessCount').textContent = result.success_count || 0;
+                document.getElementById('importErrorCount').textContent = result.error_count || 0;
+
+                const errorList = document.getElementById('importErrorList');
+                const errorsDiv = document.getElementById('importErrors');
+
+                if (result.errors && result.errors.length > 0) {
+                    errorsDiv.style.display = 'block';
+                    errorList.innerHTML = result.errors.map(e => `<li>${e}</li>`).join('');
+                } else {
+                    errorsDiv.style.display = 'none';
+                }
+
+                if (result.success) {
+                    loadProducts();
+                }
+
+            } catch (e) {
+                alert('导入失败: ' + e.message);
+            } finally {
+                importBtn.disabled = false;
+                importBtn.textContent = '开始导入';
+            }
         }
 
         async function checkAdminAuth() {

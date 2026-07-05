@@ -659,6 +659,196 @@ def create_app():
         database.update_supplier_product(product_id, status="deleted")
         return jsonify({"success": True})
 
+    @app.route("/api/supplier-products/import/template")
+    def api_supplier_products_template():
+        auth_check = require_auth("admin")
+        if auth_check:
+            return auth_check
+
+        from io import BytesIO
+        from openpyxl import Workbook
+        from openpyxl.styles import Font, PatternFill, Alignment
+
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "供应商商品导入模板"
+
+        headers = [
+            "供应商名称*", "商品类型*", "一级分类", "二级分类",
+            "商品名称*", "规格型号", "单位", "价格*", "最小起订量",
+            "批量折扣", "交货周期", "质保天数", "商品描述", "图片链接",
+            "关键词", "状态"
+        ]
+
+        header_font = Font(bold=True, color="FFFFFF")
+        header_fill = PatternFill(start_color="6366f1", end_color="6366f1", fill_type="solid")
+
+        for col, header in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col, value=header)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+
+        examples = [
+            ["示例供应商A", "goods", "办公设备", "打印机", "A4彩色激光打印机", "HP M254dw", "台", 2999.00, 1, "10台以上95折", "3-5工作日", 365, "高速彩色打印，支持双面", "", "打印机", "active"],
+            ["示例供应商B", "service", "运维服务", "网络维护", "企业网络年度维护服务", "100节点以内", "年", 12000.00, 1, "", "7x24小时响应", 0, "包含网络设备巡检、故障排除", "", "网络维护", "active"],
+        ]
+        for row_idx, example in enumerate(examples, 2):
+            for col_idx, value in enumerate(example, 1):
+                ws.cell(row=row_idx, column=col_idx, value=value)
+
+        col_widths = [18, 10, 12, 12, 30, 20, 8, 10, 12, 18, 15, 10, 30, 30, 15, 10]
+        for i, width in enumerate(col_widths, 1):
+            ws.column_dimensions[chr(64 + i)].width = width
+
+        ws.freeze_panes = "A2"
+
+        buf = BytesIO()
+        wb.save(buf)
+        buf.seek(0)
+
+        from flask import send_file
+        return send_file(
+            buf,
+            as_attachment=True,
+            download_name="供应商商品导入模板.xlsx",
+            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+
+    @app.route("/api/supplier-products/import", methods=["POST"])
+    def api_supplier_products_import():
+        auth_check = require_auth("admin")
+        if auth_check:
+            return auth_check
+
+        try:
+            if "file" not in request.files:
+                return jsonify({"error": "请上传文件"}), 400
+
+            file = request.files["file"]
+            if file.filename == "":
+                return jsonify({"error": "请选择文件"}), 400
+
+            if not file.filename.endswith((".xlsx", ".xls", ".csv")):
+                return jsonify({"error": "仅支持 Excel (.xlsx, .xls) 和 CSV 文件"}), 400
+
+            filename = file.filename.lower()
+            products = []
+            errors = []
+
+            if filename.endswith(".csv"):
+                import csv
+                import io
+                content = file.read().decode("utf-8-sig")
+                reader = csv.DictReader(io.StringIO(content))
+                for idx, row in enumerate(reader, 1):
+                    product, err = _parse_supplier_product_row(row, idx)
+                    if product:
+                        products.append(product)
+                    if err:
+                        errors.append(err)
+            else:
+                from openpyxl import load_workbook
+                wb = load_workbook(file)
+                ws = wb.active
+
+                headers = []
+                for cell in ws[1]:
+                    headers.append(str(cell.value).strip() if cell.value else "")
+
+                for row_idx in range(2, ws.max_row + 1):
+                    row_data = {}
+                    for col_idx, header in enumerate(headers):
+                        cell_value = ws.cell(row=row_idx, column=col_idx + 1).value
+                        row_data[header] = str(cell_value).strip() if cell_value is not None else ""
+
+                    if not any(row_data.values()):
+                        continue
+
+                    product, err = _parse_supplier_product_row(row_data, row_idx)
+                    if product:
+                        products.append(product)
+                    if err:
+                        errors.append(err)
+
+            if not products:
+                return jsonify({"error": "没有解析到有效的商品数据", "errors": errors}), 400
+
+            success_count, db_errors = database.batch_insert_supplier_products(products)
+            errors.extend(db_errors)
+
+            return jsonify({
+                "success": True,
+                "total": len(products) + len([e for e in errors if "解析失败" in e or "缺少" in e]),
+                "success_count": success_count,
+                "error_count": len(errors),
+                "errors": errors[:50]
+            })
+
+        except Exception as e:
+            return jsonify({"error": f"导入失败: {str(e)}"}), 500
+
+    def _parse_supplier_product_row(row, row_num):
+        from storage.models import SupplierProduct
+
+        supplier_name = row.get("供应商名称*", "") or row.get("供应商名称", "")
+        product_type = row.get("商品类型*", "") or row.get("商品类型", "")
+        title = row.get("商品名称*", "") or row.get("商品名称", "")
+        price_str = row.get("价格*", "") or row.get("价格", "")
+
+        if not supplier_name:
+            return None, f"第{row_num}行: 缺少供应商名称"
+        if not title:
+            return None, f"第{row_num}行: 缺少商品名称"
+        if not price_str:
+            return None, f"第{row_num}行: 缺少价格"
+
+        supplier = database.get_supplier_by_name(supplier_name)
+        if not supplier:
+            return None, f"第{row_num}行: 供应商 '{supplier_name}' 不存在"
+
+        try:
+            price = float(price_str)
+        except (ValueError, TypeError):
+            return None, f"第{row_num}行: 价格格式不正确 '{price_str}'"
+
+        product_type = product_type if product_type in ("goods", "service") else "goods"
+
+        try:
+            min_order = int(row.get("最小起订量", "1") or 1)
+        except (ValueError, TypeError):
+            min_order = 1
+
+        try:
+            warranty_days = int(row.get("质保天数", "0") or 0)
+        except (ValueError, TypeError):
+            warranty_days = 0
+
+        status = row.get("状态", "active") or "active"
+        if status not in ("active", "inactive"):
+            status = "active"
+
+        product = SupplierProduct(
+            supplier_id=supplier.id,
+            product_type=product_type,
+            main_category=row.get("一级分类", "") or "",
+            sub_category=row.get("二级分类", "") or "",
+            title=title,
+            spec=row.get("规格型号", "") or "",
+            unit=row.get("单位", "") or "",
+            price=price,
+            min_order=min_order,
+            bulk_discount=row.get("批量折扣", "") or "",
+            delivery_cycle=row.get("交货周期", "") or "",
+            warranty_days=warranty_days,
+            description=row.get("商品描述", "") or "",
+            image_url=row.get("图片链接", "") or "",
+            status=status,
+            keyword=row.get("关键词", "") or "",
+        )
+
+        return product, None
+
     @app.route("/api/rfq", methods=["GET"])
     def api_rfq_list():
         auth_check = require_auth()

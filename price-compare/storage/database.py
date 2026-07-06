@@ -1010,7 +1010,7 @@ def update_rfq(rfq_id: int, **kwargs):
         cursor.execute(f"UPDATE rfq_records SET {', '.join(updates)} WHERE id = ?", params)
 
 
-def get_rfq_records(user_id: int = None, status: str = None, limit: int = 50) -> List[RFQRecord]:
+def get_rfq_records(user_id: int = None, supplier_id: int = None, status: str = None, limit: int = 50) -> List[RFQRecord]:
     with get_db() as conn:
         cursor = conn.cursor()
         query = "SELECT * FROM rfq_records"
@@ -1019,6 +1019,9 @@ def get_rfq_records(user_id: int = None, status: str = None, limit: int = 50) ->
         if user_id:
             conditions.append("user_id = ?")
             params.append(user_id)
+        if supplier_id:
+            conditions.append("assigned_supplier_id = ?")
+            params.append(supplier_id)
         if status:
             conditions.append("status = ?")
             params.append(status)

@@ -168,6 +168,46 @@
                 <p>暂无商品数据</p>
                 <p class="empty-hint">点击"添加商品"开始录入您的货物或服务</p>
             </div>
+
+            <!-- 询价单管理 -->
+            <div class="panel">
+                <div class="panel-header">
+                    <div class="panel-title">
+                        <svg class="panel-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <polyline points="14 2 14 8 20 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <line x1="16" y1="13" x2="8" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                            <line x1="16" y1="17" x2="8" y2="17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                            <polyline points="10 9 9 9 8 9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                        询价单管理
+                        <span class="panel-count" id="rfqCount">0</span>
+                    </div>
+                    <div class="panel-actions">
+                        <select class="filter-select" id="rfqStatus" onchange="loadRFQs()">
+                            <option value="">全部状态</option>
+                            <option value="pending">待报价</option>
+                            <option value="quoted">已报价</option>
+                            <option value="accepted">已达成</option>
+                            <option value="rejected">已拒绝</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="product-list" id="rfqList">
+                    <div class="loading-state">
+                        <div class="loading-spinner"></div>
+                        <p>加载中...</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="empty-state" id="rfqEmptyState" style="display: none;">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <p>暂无询价单</p>
+                <p class="empty-hint">采购人向您发起询价后会显示在这里</p>
+            </div>
         </main>
     </div>
 
@@ -298,6 +338,66 @@
                 </button>
             </div>
             <div class="modal-body" id="detailBody"></div>
+        </div>
+    </div>
+
+    <!-- 报价弹窗 -->
+    <div class="modal" id="quoteModal" style="display:none;">
+        <div class="modal-backdrop" onclick="closeQuoteModal()"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title-wrap">
+                    <div class="modal-icon">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z" stroke="white" stroke-width="2"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 id="quoteModalTitle">报价回应</h3>
+                        <p>对询价单进行报价或拒绝</p>
+                    </div>
+                </div>
+                <button class="modal-close" onclick="closeQuoteModal()">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div id="quoteRfqInfo" style="margin-bottom: 20px; padding: 15px; background: var(--bg-hover); border-radius: var(--radius-md);">
+                </div>
+                <form id="quoteForm" onsubmit="submitQuote(event)">
+                    <input type="hidden" id="quoteRfqId">
+                    <div class="form-group">
+                        <label class="form-label">回应方式</label>
+                        <div style="display: flex; gap: 12px;">
+                            <label style="display: flex; align-items: center; gap: 6px;">
+                                <input type="radio" name="quoteAction" value="accept" checked>
+                                <span>接受并报价</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 6px;">
+                                <input type="radio" name="quoteAction" value="reject">
+                                <span>拒绝报价</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div id="quotePriceSection">
+                        <div class="form-group">
+                            <label class="form-label">报价金额 (元)</label>
+                            <input type="number" id="quotePrice" step="0.01" placeholder="0.00" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">回应备注</label>
+                        <textarea id="quoteResponse" rows="3" placeholder="请输入回应内容..."></textarea>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" onclick="closeQuoteModal()">取消</button>
+                        <button type="submit" class="btn btn-primary">提交</button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 
@@ -677,6 +777,226 @@
             document.getElementById('editModal').style.display = 'none';
         }
 
+        async function loadRFQs() {
+            const grid = document.getElementById('rfqList');
+            const emptyState = document.getElementById('rfqEmptyState');
+            grid.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div><p>加载中...</p></div>';
+            emptyState.style.display = 'none';
+
+            const status = document.getElementById('rfqStatus').value;
+            const params = new URLSearchParams();
+            if (status) params.set('status', status);
+
+            try {
+                const data = await apiFetch(`/api/rfq?${params.toString()}`);
+                if (data && data.rfqs) {
+                    renderRFQs(data.rfqs);
+                }
+            } catch (e) {
+                grid.innerHTML = '<div class="empty-state"><p>加载失败，请重试</p></div>';
+            }
+        }
+
+        function renderRFQs(rfqs) {
+            const grid = document.getElementById('rfqList');
+            const emptyState = document.getElementById('rfqEmptyState');
+
+            if (!rfqs || rfqs.length === 0) {
+                grid.innerHTML = '';
+                emptyState.style.display = 'block';
+                return;
+            }
+
+            document.getElementById('rfqCount').textContent = rfqs.length;
+
+            grid.innerHTML = rfqs.map(r => {
+                const typeText = r.product_type === 'service' ? '服务' : '货物';
+                const typeClass = r.product_type === 'service' ? 'tag-service' : 'tag-goods';
+                
+                const statusMap = {
+                    'pending': { text: '待报价', class: 'tag-warning' },
+                    'quoted': { text: '已报价', class: 'tag-primary' },
+                    'accepted': { text: '已达成', class: 'tag-success' },
+                    'rejected': { text: '已拒绝', class: 'tag-danger' }
+                };
+                const statusInfo = statusMap[r.status] || { text: r.status, class: 'tag-category' };
+
+                return `
+                    <div class="product-card">
+                        <div class="product-card-header">
+                            <div class="product-card-info">
+                                <div class="product-tags">
+                                    <span class="tag ${typeClass}">${typeText}</span>
+                                    <span class="tag ${statusInfo.class}">${statusInfo.text}</span>
+                                </div>
+                                <h3 class="product-title">${r.title}</h3>
+                                <p class="product-spec">规格：${r.spec || '-'} | 数量：${r.quantity}${r.unit || ''}</p>
+                            </div>
+                            <div class="product-card-price">
+                                <span class="price">¥${parseFloat(r.expected_price || 0).toFixed(2)}</span>
+                                <span class="unit">期望价</span>
+                            </div>
+                        </div>
+                        <div class="product-card-meta">
+                            <span>采购人：${r.buyer_name || '-'}</span>
+                            <span>交货要求：${r.delivery_requirement || '-'}</span>
+                            <span>创建时间：${r.created_at || '-'}</span>
+                        </div>
+                        ${r.supplier_quote > 0 ? `<div style="padding: 10px; background: rgba(34,197,94,0.1); border-radius: 6px; margin-bottom: 12px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span style="color: #4ade80;">已报价：¥${parseFloat(r.supplier_quote).toFixed(2)}</span>
+                                ${r.quote_response ? `<span style="font-size: 12px; color: var(--text-secondary);">${r.quote_response}</span>` : ''}
+                            </div>
+                        </div>` : ''}
+                        <div class="product-card-actions">
+                            ${r.status === 'pending' ? `<button class="btn btn-sm btn-primary" onclick="showQuoteModal(${r.id}, '${r.title.replace(/'/g, "\\'")}')">报价回应</button>` : ''}
+                            <button class="btn btn-sm btn-secondary" onclick="showRfqDetail(${r.id})">详情</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function showRfqDetail(rfqId) {
+            try {
+                const data = await apiFetch(`/api/rfq/${rfqId}`);
+                if (data && data.rfq) {
+                    const r = data.rfq;
+                    const typeText = r.product_type === 'service' ? '服务' : '货物';
+                    const statusMap = {
+                        'pending': '待报价',
+                        'quoted': '已报价',
+                        'accepted': '已达成',
+                        'rejected': '已拒绝'
+                    };
+                    document.getElementById('detailBody').innerHTML = `
+                        <div class="detail-section">
+                            <div class="detail-tags">
+                                <span class="tag tag-goods">${typeText}</span>
+                                <span class="tag tag-primary">${statusMap[r.status] || r.status}</span>
+                            </div>
+                            <h2>${r.title}</h2>
+                            <p class="detail-spec">${r.spec || '无规格信息'}</p>
+                            <div class="detail-price">
+                                <span class="price">¥${parseFloat(r.expected_price).toFixed(2)}</span>
+                                <span class="unit">期望价格</span>
+                            </div>
+                        </div>
+                        <div class="detail-grid">
+                            <div class="detail-item"><label>采购数量</label><span>${r.quantity} ${r.unit || '件'}</span></div>
+                            <div class="detail-item"><label>采购人</label><span>${r.buyer_name || '-'}</span></div>
+                            <div class="detail-item"><label>交货要求</label><span>${r.delivery_requirement || '-'}</span></div>
+                            <div class="detail-item"><label>询价状态</label><span>${statusMap[r.status] || r.status}</span></div>
+                        </div>
+                        ${r.supplier_quote > 0 ? `<div class="detail-desc">
+                            <h4>供应商报价</h4>
+                            <p style="font-size: 18px; color: #4ade80; font-weight: 700;">¥${parseFloat(r.supplier_quote).toFixed(2)}</p>
+                            ${r.quote_response ? `<p>${r.quote_response}</p>` : ''}
+                        </div>` : ''}
+                        <div class="detail-time">
+                            <p>创建时间：${r.created_at || '-'}</p>
+                            <p>更新时间：${r.updated_at || '-'}</p>
+                        </div>
+                    `;
+                    document.getElementById('detailModal').style.display = 'flex';
+                }
+            } catch (e) {
+                alert('加载详情失败');
+            }
+        }
+
+        let currentQuoteRfq = null;
+
+        async function showQuoteModal(rfqId, title) {
+            currentQuoteRfq = rfqId;
+            document.getElementById('quoteRfqId').value = rfqId;
+            document.getElementById('quoteForm').reset();
+
+            try {
+                const data = await apiFetch(`/api/rfq/${rfqId}`);
+                if (data && data.rfq) {
+                    const r = data.rfq;
+                    document.getElementById('quoteRfqInfo').innerHTML = `
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                            <span style="font-weight: 600;">${r.title}</span>
+                            <span class="tag tag-warning">待报价</span>
+                        </div>
+                        <div style="font-size: 13px; color: var(--text-secondary);">
+                            <p>规格：${r.spec || '-'} | 数量：${r.quantity}${r.unit || ''}</p>
+                            <p>采购人期望价：¥${parseFloat(r.expected_price).toFixed(2)}</p>
+                            <p>采购人：${r.buyer_name || '-'}</p>
+                        </div>
+                    `;
+                }
+            } catch (e) { console.error(e); }
+
+            document.getElementById('quoteModal').style.display = 'flex';
+        }
+
+        function closeQuoteModal() {
+            document.getElementById('quoteModal').style.display = 'none';
+            currentQuoteRfq = null;
+        }
+
+        document.querySelectorAll('input[name="quoteAction"]').forEach(radio => {
+            radio.addEventListener('change', function() {
+                const priceSection = document.getElementById('quotePriceSection');
+                priceSection.style.display = this.value === 'accept' ? 'block' : 'none';
+                const priceInput = document.getElementById('quotePrice');
+                priceInput.required = this.value === 'accept';
+            });
+        });
+
+        async function submitQuote(e) {
+            e.preventDefault();
+            const rfqId = document.getElementById('quoteRfqId').value;
+            const action = document.querySelector('input[name="quoteAction"]:checked').value;
+            const response = document.getElementById('quoteResponse').value.trim();
+
+            if (action === 'accept') {
+                const price = parseFloat(document.getElementById('quotePrice').value);
+                if (!price || price <= 0) {
+                    alert('请输入有效报价金额');
+                    return;
+                }
+                try {
+                    const data = await apiFetch(`/api/rfq/${rfqId}/quote`, {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            supplier_quote: price,
+                            quote_response: response || '同意报价'
+                        })
+                    });
+                    if (data && data.success) {
+                        closeQuoteModal();
+                        await loadRFQs();
+                    } else if (data) {
+                        alert(data.error || '报价失败');
+                    }
+                } catch (e) {
+                    alert('网络错误，请重试');
+                }
+            } else {
+                try {
+                    const data = await apiFetch(`/api/rfq/${rfqId}`, {
+                        method: 'PUT',
+                        body: JSON.stringify({
+                            status: 'rejected',
+                            quote_response: response || '无法满足该询价'
+                        })
+                    });
+                    if (data && data.success) {
+                        closeQuoteModal();
+                        await loadRFQs();
+                    } else if (data) {
+                        alert(data.error || '操作失败');
+                    }
+                } catch (e) {
+                    alert('网络错误，请重试');
+                }
+            }
+        }
+
         async function deleteProduct(productId, title) {
             if (!confirm(`确定要删除商品「${title}」吗？删除后不可恢复。`)) return;
             try {
@@ -694,7 +1014,7 @@
         window.addEventListener('DOMContentLoaded', async () => {
             const isAuthed = await checkAuth();
             if (isAuthed) {
-                await loadProducts();
+                await Promise.all([loadProducts(), loadRFQs()]);
             }
         });
     </script>

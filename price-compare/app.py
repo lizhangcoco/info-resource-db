@@ -953,10 +953,24 @@ def create_app():
 
         if user.role == "admin":
             rfqs = database.get_rfq_records(status=status, limit=limit)
+        elif user.role == "supplier":
+            rfqs = database.get_rfq_records(supplier_id=user.supplier_id, status=status, limit=limit)
         else:
             rfqs = database.get_rfq_records(user_id=user.id, status=status, limit=limit)
 
-        return jsonify({"rfqs": [r.to_dict() for r in rfqs]})
+        suppliers = database.get_suppliers(limit=200)
+        supplier_map = {s.id: s.name for s in suppliers}
+        users = database.get_users(limit=200)
+        user_map = {u.id: u.username for u in users}
+
+        result = []
+        for r in rfqs:
+            d = r.to_dict()
+            d["supplier_name"] = supplier_map.get(r.assigned_supplier_id, "")
+            d["buyer_name"] = user_map.get(r.user_id, "")
+            result.append(d)
+
+        return jsonify({"rfqs": result})
 
     @app.route("/api/rfq", methods=["POST"])
     def api_rfq_create():
@@ -966,6 +980,14 @@ def create_app():
 
         user = get_current_user()
         data = request.get_json() or {}
+
+        assigned_supplier_id = data.get("assigned_supplier_id")
+        if assigned_supplier_id:
+            assigned_supplier_id = int(assigned_supplier_id)
+            supplier = database.get_supplier_by_id(assigned_supplier_id)
+            if not supplier:
+                return jsonify({"error": "指定的供应商不存在"}), 400
+
         rfq = RFQRecord(
             user_id=user.id,
             product_type=data.get("product_type", "goods"),
@@ -976,9 +998,21 @@ def create_app():
             expected_price=float(data.get("expected_price", 0)),
             delivery_requirement=data.get("delivery_requirement", ""),
             status="pending",
+            assigned_supplier_id=assigned_supplier_id,
         )
         rfq_id = database.create_rfq(rfq)
-        return jsonify({"success": True, "rfq": database.get_rfq_by_id(rfq_id).to_dict()})
+        created_rfq = database.get_rfq_by_id(rfq_id)
+
+        suppliers = database.get_suppliers(limit=200)
+        supplier_map = {s.id: s.name for s in suppliers}
+        users = database.get_users(limit=200)
+        user_map = {u.id: u.username for u in users}
+
+        result = created_rfq.to_dict()
+        result["supplier_name"] = supplier_map.get(created_rfq.assigned_supplier_id, "")
+        result["buyer_name"] = user_map.get(created_rfq.user_id, "")
+
+        return jsonify({"success": True, "rfq": result})
 
     @app.route("/api/rfq/<int:rfq_id>", methods=["GET"])
     def api_rfq_get(rfq_id):
@@ -991,10 +1025,24 @@ def create_app():
             return jsonify({"error": "询价单不存在"}), 404
 
         user = get_current_user()
-        if user.role != "admin" and rfq.user_id != user.id:
+        if user.role == "admin":
+            pass
+        elif user.role == "supplier":
+            if rfq.assigned_supplier_id != user.supplier_id:
+                return jsonify({"error": "无权查看此询价单"}), 403
+        elif rfq.user_id != user.id:
             return jsonify({"error": "无权查看此询价单"}), 403
 
-        return jsonify({"rfq": rfq.to_dict()})
+        suppliers = database.get_suppliers(limit=200)
+        supplier_map = {s.id: s.name for s in suppliers}
+        users = database.get_users(limit=200)
+        user_map = {u.id: u.username for u in users}
+
+        result = rfq.to_dict()
+        result["supplier_name"] = supplier_map.get(rfq.assigned_supplier_id, "")
+        result["buyer_name"] = user_map.get(rfq.user_id, "")
+
+        return jsonify({"rfq": result})
 
     @app.route("/api/rfq/<int:rfq_id>", methods=["PUT"])
     def api_rfq_update(rfq_id):
@@ -1007,7 +1055,12 @@ def create_app():
             return jsonify({"error": "询价单不存在"}), 404
 
         user = get_current_user()
-        if user.role != "admin" and rfq.user_id != user.id:
+        if user.role == "admin":
+            pass
+        elif user.role == "supplier":
+            if rfq.assigned_supplier_id != user.supplier_id:
+                return jsonify({"error": "无权修改此询价单"}), 403
+        elif rfq.user_id != user.id:
             return jsonify({"error": "无权修改此询价单"}), 403
 
         data = request.get_json() or {}
@@ -1020,13 +1073,36 @@ def create_app():
 
         database.update_rfq(rfq_id, **update_fields)
         rfq = database.get_rfq_by_id(rfq_id)
-        return jsonify({"success": True, "rfq": rfq.to_dict()})
+
+        suppliers = database.get_suppliers(limit=200)
+        supplier_map = {s.id: s.name for s in suppliers}
+        users = database.get_users(limit=200)
+        user_map = {u.id: u.username for u in users}
+
+        result = rfq.to_dict()
+        result["supplier_name"] = supplier_map.get(rfq.assigned_supplier_id, "")
+        result["buyer_name"] = user_map.get(rfq.user_id, "")
+
+        return jsonify({"success": True, "rfq": result})
 
     @app.route("/api/rfq/<int:rfq_id>/quote", methods=["POST"])
     def api_rfq_quote(rfq_id):
-        auth_check = require_auth("admin")
+        auth_check = require_auth()
         if auth_check:
             return auth_check
+
+        user = get_current_user()
+        rfq = database.get_rfq_by_id(rfq_id)
+        if not rfq:
+            return jsonify({"error": "询价单不存在"}), 404
+
+        if user.role == "admin":
+            pass
+        elif user.role == "supplier":
+            if rfq.assigned_supplier_id != user.supplier_id:
+                return jsonify({"error": "无权对此询价单报价"}), 403
+        else:
+            return jsonify({"error": "无权对此询价单报价"}), 403
 
         data = request.get_json() or {}
         database.update_rfq(
@@ -1036,7 +1112,17 @@ def create_app():
             quote_response=data.get("quote_response", ""),
         )
         rfq = database.get_rfq_by_id(rfq_id)
-        return jsonify({"success": True, "rfq": rfq.to_dict()})
+
+        suppliers = database.get_suppliers(limit=200)
+        supplier_map = {s.id: s.name for s in suppliers}
+        users = database.get_users(limit=200)
+        user_map = {u.id: u.username for u in users}
+
+        result = rfq.to_dict()
+        result["supplier_name"] = supplier_map.get(rfq.assigned_supplier_id, "")
+        result["buyer_name"] = user_map.get(rfq.user_id, "")
+
+        return jsonify({"success": True, "rfq": result})
 
     @app.route("/api/deploy", methods=["POST"])
     def api_deploy():

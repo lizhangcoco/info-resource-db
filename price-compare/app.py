@@ -1042,6 +1042,11 @@ def create_app():
     def api_deploy():
         import subprocess
         try:
+            stash = subprocess.run(
+                ["git", "stash"],
+                capture_output=True, text=True, timeout=10,
+                cwd="/www/bijia-system"
+            )
             pull = subprocess.run(
                 ["git", "pull", "origin", "trae/agent-w4LV0u"],
                 capture_output=True, text=True, timeout=30,
@@ -1057,6 +1062,8 @@ def create_app():
             )
             return jsonify({
                 "success": True,
+                "stash_output": stash.stdout,
+                "stash_errors": stash.stderr,
                 "pull_output": pull.stdout,
                 "pull_errors": pull.stderr,
                 "install_output": install.stdout[-500:] if install.stdout else "",

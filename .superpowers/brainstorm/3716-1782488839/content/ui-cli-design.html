@@ -1,0 +1,176 @@
+<h2>Web界面 & CLI设计</h2>
+<p class="subtitle">简洁易用的操作界面，功能完整的命令行工具</p>
+
+<div class="section">
+  <h3>Web演示页面设计</h3>
+  <div style="background:#f5f5f5;border-radius:12px;padding:16px;margin-top:12px;">
+    
+    <!-- 顶部搜索区 -->
+    <div style="background:linear-gradient(135deg,#1976d2,#0d47a1);border-radius:10px;padding:20px;color:#fff;margin-bottom:16px;">
+      <h3 style="margin:0 0 12px 0;font-size:18px;">🛒 电商商品价格比价系统</h3>
+      <div style="display:flex;gap:10px;">
+        <div style="flex:1;background:rgba(255,255,255,0.95);border-radius:8px;padding:10px 14px;color:#333;font-size:13px;">
+          🔍 输入关键词搜索，如：iPhone 15 Pro、戴森吹风机、Nike运动鞋...
+        </div>
+        <button style="background:#ff9800;color:#fff;border:none;border-radius:8px;padding:10px 24px;font-weight:600;cursor:pointer;">
+          开始比价
+        </button>
+      </div>
+      <div style="margin-top:10px;display:flex;gap:12px;font-size:12px;">
+        <label style="display:flex;align-items:center;gap:4px;"><input type="checkbox" checked> 京东</label>
+        <label style="display:flex;align-items:center;gap:4px;"><input type="checkbox" checked> 淘宝</label>
+        <label style="display:flex;align-items:center;gap:4px;"><input type="checkbox" checked> 拼多多</label>
+      </div>
+    </div>
+
+    <!-- 统计概览 -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;">
+      <div style="background:#fff;border-radius:8px;padding:12px;text-align:center;">
+        <div style="font-size:11px;color:#999;">采集商品</div>
+        <div style="font-size:22px;font-weight:700;color:#1976d2;">36 件</div>
+      </div>
+      <div style="background:#fff;border-radius:8px;padding:12px;text-align:center;">
+        <div style="font-size:11px;color:#999;">最低价</div>
+        <div style="font-size:22px;font-weight:700;color:#4caf50;">¥2,999</div>
+      </div>
+      <div style="background:#fff;border-radius:8px;padding:12px;text-align:center;">
+        <div style="font-size:11px;color:#999;">均价</div>
+        <div style="font-size:22px;font-weight:700;color:#ff9800;">¥4,580</div>
+      </div>
+      <div style="background:#fff;border-radius:8px;padding:12px;text-align:center;">
+        <div style="font-size:11px;color:#999;">推荐商品</div>
+        <div style="font-size:22px;font-weight:700;color:#9c27b0;">3 款</div>
+      </div>
+    </div>
+
+    <!-- 主内容区 -->
+    <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px;">
+      <!-- 左侧：商品列表 -->
+      <div style="background:#fff;border-radius:8px;padding:12px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <h4 style="margin:0;font-size:14px;">📋 商品列表（价格从低到高）</h4>
+          <div style="font-size:11px;color:#999;">
+            <select style="border:1px solid #ddd;border-radius:4px;padding:2px 6px;font-size:11px;">
+              <option>价格排序</option>
+              <option>销量排序</option>
+              <option>评分排序</option>
+            </select>
+          </div>
+        </div>
+        
+        <!-- 推荐商品 -->
+        <div style="background:#e8f5e9;border:2px solid #4caf50;border-radius:8px;padding:10px;margin-bottom:8px;">
+          <div style="display:flex;gap:10px;">
+            <div style="width:60px;height:60px;background:#eee;border-radius:6px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:24px;">📱</div>
+            <div style="flex:1;min-width:0;">
+              <div style="display:flex;align-items:center;gap:6px;">
+                <span style="background:#4caf50;color:#fff;font-size:10px;padding:1px 6px;border-radius:8px;">💰 性价比之选</span>
+                <span style="background:#e3f2fd;color:#1976d2;font-size:10px;padding:1px 6px;border-radius:8px;">京东</span>
+              </div>
+              <div style="font-size:12px;font-weight:600;margin:4px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Apple iPhone 15 Pro 256GB 原色钛金属</div>
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <span style="font-size:16px;font-weight:700;color:#f44336;">¥2,999</span>
+                <span style="font-size:11px;color:#666;">月销 2.3万 · 评分 4.9</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 普通商品 -->
+        <div style="background:#fafafa;border-radius:6px;padding:10px;margin-bottom:6px;">
+          <div style="display:flex;gap:10px;">
+            <div style="width:50px;height:50px;background:#eee;border-radius:4px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:20px;">📱</div>
+            <div style="flex:1;min-width:0;">
+              <div style="display:flex;align-items:center;gap:6px;">
+                <span style="background:#fff3e0;color:#f57c00;font-size:10px;padding:1px 6px;border-radius:8px;">淘宝</span>
+              </div>
+              <div style="font-size:12px;margin:3px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Apple iPhone 15 Pro 128GB 官方旗舰店正品</div>
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <span style="font-size:14px;font-weight:700;color:#f44336;">¥3,299</span>
+                <span style="font-size:11px;color:#666;">月销 1.8万 · 评分 4.8</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div style="background:#fafafa;border-radius:6px;padding:10px;">
+          <div style="display:flex;gap:10px;">
+            <div style="width:50px;height:50px;background:#eee;border-radius:4px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:20px;">📱</div>
+            <div style="flex:1;min-width:0;">
+              <div style="display:flex;align-items:center;gap:6px;">
+                <span style="background:#fce4ec;color:#c2185b;font-size:10px;padding:1px 6px;border-radius:8px;">拼多多</span>
+              </div>
+              <div style="font-size:12px;margin:3px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">【百亿补贴】iPhone 15 Pro 256GB 国行全新</div>
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <span style="font-size:14px;font-weight:700;color:#f44336;">¥3,199</span>
+                <span style="font-size:11px;color:#666;">已拼 5.6万件 · 评分 4.7</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 右侧：图表区 -->
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div style="background:#fff;border-radius:8px;padding:12px;">
+          <h4 style="margin:0 0 8px 0;font-size:13px;">📊 平台价格对比</h4>
+          <div style="height:120px;background:#fafafa;border-radius:6px;display:flex;align-items:flex-end;justify-content:space-around;padding:10px;">
+            <div style="text-align:center;">
+              <div style="width:30px;background:#1976d2;border-radius:4px 4px 0 0;height:60px;"></div>
+              <div style="font-size:10px;color:#666;margin-top:4px;">京东</div>
+              <div style="font-size:10px;font-weight:600;color:#1976d2;">¥4.2k</div>
+            </div>
+            <div style="text-align:center;">
+              <div style="width:30px;background:#ff9800;border-radius:4px 4px 0 0;height:75px;"></div>
+              <div style="font-size:10px;color:#666;margin-top:4px;">淘宝</div>
+              <div style="font-size:10px;font-weight:600;color:#ff9800;">¥4.8k</div>
+            </div>
+            <div style="text-align:center;">
+              <div style="width:30px;background:#e91e63;border-radius:4px 4px 0 0;height:45px;"></div>
+              <div style="font-size:10px;color:#666;margin-top:4px;">拼多多</div>
+              <div style="font-size:10px;font-weight:600;color:#e91e63;">¥3.6k</div>
+            </div>
+          </div>
+        </div>
+        
+        <div style="background:#fff;border-radius:8px;padding:12px;">
+          <h4 style="margin:0 0 8px 0;font-size:13px;">📈 价格趋势</h4>
+          <div style="height:100px;background:#fafafa;border-radius:6px;position:relative;overflow:hidden;">
+            <svg viewBox="0 0 200 100" style="width:100%;height:100%;">
+              <path d="M10,80 Q40,70 70,60 T130,45 T190,30" fill="none" stroke="#4caf50" stroke-width="2"/>
+              <circle cx="10" cy="80" r="3" fill="#4caf50"/>
+              <circle cx="70" cy="60" r="3" fill="#4caf50"/>
+              <circle cx="130" cy="45" r="3" fill="#4caf50"/>
+              <circle cx="190" cy="30" r="3" fill="#f44336"/>
+            </svg>
+            <div style="position:absolute;bottom:4px;left:8px;font-size:10px;color:#999;">30天前 → 今天</div>
+            <div style="position:absolute;top:4px;right:8px;font-size:10px;color:#f44336;font-weight:600;">↓ 28%</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:24px;">
+  <h3>CLI 命令行工具</h3>
+  <div style="background:#263238;border-radius:8px;padding:16px;color:#eee;font-family:monospace;font-size:13px;margin-top:12px;line-height:1.8;">
+    <div style="color:#80cbc4;"># 基本用法 - 按关键词搜索采集</div>
+    <div><span style="color:#4caf50;">$</span> price-scraper search <span style="color:#ffcc80;">"iPhone 15 Pro"</span></div>
+    <div style="color:#90a4ae;">→ 从京东/淘宝/拼多多采集商品，自动清洗去重，显示对比结果</div>
+    <br>
+    <div style="color:#80cbc4;"># 指定平台和结果数量</div>
+    <div><span style="color:#4caf50;">$</span> price-scraper search <span style="color:#ffcc80;">"AirPods Pro"</span> <span style="color:#a5d6a7;">--platforms</span> jd,taobao <span style="color:#a5d6a7;">--limit</span> 20</div>
+    <br>
+    <div style="color:#80cbc4;"># 导出结果为 JSON/CSV</div>
+    <div><span style="color:#4caf50;">$</span> price-scraper search <span style="color:#ffcc80;">"戴森吹风机"</span> <span style="color:#a5d6a7;">--export</span> result.json</div>
+    <div><span style="color:#4caf50;">$</span> price-scraper search <span style="color:#ffcc80;">"戴森吹风机"</span> <span style="color:#a5d6a7;">--export</span> result.csv <span style="color:#a5d6a7;">--format</span> csv</div>
+    <br>
+    <div style="color:#80cbc4;"># 查看价格历史趋势</div>
+    <div><span style="color:#4caf50;">$</span> price-scraper history <span style="color:#ffcc80;">"iPhone 15 Pro"</span></div>
+    <br>
+    <div style="color:#80cbc4;"># 启动 Web 演示页面</div>
+    <div><span style="color:#4caf50;">$</span> price-scraper web <span style="color:#a5d6a7;">--port</span> 5000</div>
+    <div style="color:#90a4ae;">→ 启动Web服务，在浏览器中进行可视化操作</div>
+  </div>
+</div>

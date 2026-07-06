@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>供应商商品库 - 绿通采购货物比价参考平台</title>
+    <link rel="stylesheet" href="/bijia/static/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="header-inner">
+                <div class="header-top">
+                    <div class="logo-section">
+                        <div class="logo-icon" onclick="window.location.href='/bijia/'">
+                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M3 3H5L5.4 5M7 13H17L19 5H5.4M7 13L5.4 5M7 13L4.5 15.5C4.1 15.9 3.8 16.5 4 17C4.2 17.5 4.8 18 5.5 18H18" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                <circle cx="9" cy="20" r="1.5" fill="white"/>
+                                <circle cx="18" cy="20" r="1.5" fill="white"/>
+                            </svg>
+                        </div>
+                        <div class="logo-text">
+                            <h1>供应商商品库</h1>
+                            <p>浏览认证供应商提供的商品和服务</p>
+                        </div>
+                    </div>
+                    <div class="header-actions" id="headerActions">
+                        <div class="header-badge">
+                            <span class="badge-dot"></span>
+                            <span>认证供应商</span>
+                        </div>
+                        <button class="upload-btn" onclick="window.location.href='/bijia/'">
+                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            返回比价
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <div class="category-filters">
+                <div class="filter-section">
+                    <label class="filter-label">类型</label>
+                    <select class="filter-select" id="productType" onchange="loadCategories()">
+                        <option value="goods">货物</option>
+                        <option value="service">服务</option>
+                    </select>
+                </div>
+                <div class="filter-section">
+                    <label class="filter-label">一级分类</label>
+                    <select class="filter-select" id="mainCategory" onchange="loadSubCategories()">
+                        <option value="">全部</option>
+                    </select>
+                </div>
+                <div class="filter-section">
+                    <label class="filter-label">二级分类</label>
+                    <select class="filter-select" id="subCategory">
+                        <option value="">全部</option>
+                    </select>
+                </div>
+                <div class="filter-section filter-search">
+                    <input type="text" id="searchKeyword" placeholder="搜索商品名称..." onkeydown="if(event.key==='Enter') loadProducts()">
+                    <button class="search-btn-sm" onclick="loadProducts()">搜索</button>
+                </div>
+                <div class="filter-actions">
+                    <button class="btn btn-secondary" onclick="resetFilters()">重置筛选</button>
+                </div>
+            </div>
+
+            <div class="products-grid" id="productsGrid">
+                <div class="loading-state">
+                    <div class="loading-spinner"></div>
+                    <p>加载中...</p>
+                </div>
+            </div>
+
+            <div class="empty-state" id="emptyState" style="display: none;">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <p>暂无符合条件的商品</p>
+                <p class="empty-hint">请尝试调整筛选条件或搜索关键词</p>
+            </div>
+        </main>
+
+        <div class="modal" id="productModal" onclick="closeModal()">
+            <div class="modal-content" onclick="event.stopPropagation()">
+                <div class="modal-header">
+                    <h3 id="modalTitle">商品详情</h3>
+                    <button class="modal-close" onclick="closeModal()">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="modal-body" id="modalBody"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/bijia';
+        let currentUser = null;
+        let categoriesData = {};
+
+        async function checkAuth() {
+            const token = localStorage.getItem('token');
+            if (!token) return false;
+            try {
+                const resp = await fetch(`${API_BASE}/api/auth/me`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                const data = await resp.json();
+                if (data.user) {
+                    currentUser = data.user;
+                    updateHeaderUser();
+                    return true;
+                }
+            } catch (e) {
+                console.error(e);
+            }
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = API_BASE + '/login';
+            return false;
+        }
+
+        function updateHeaderUser() {
+            const actions = document.getElementById('headerActions');
+            if (!currentUser) return;
+
+            const roleText = {
+                'admin': '管理员',
+                'buyer': '采购人',
+                'supplier': '供应商'
+            }[currentUser.role] || currentUser.role;
+
+            actions.innerHTML = `
+                <div class="header-badge">
+                    <span class="badge-dot"></span>
+                    <span>认证供应商</span>
+                </div>
+                <button class="upload-btn" onclick="window.location.href='/bijia/'">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    返回比价
+                </button>
+                <div class="user-menu" onclick="toggleUserDropdown(event)">
+                    <div class="user-avatar">${currentUser.username?.charAt(0).toUpperCase() || 'U'}</div>
+                    <div class="user-info">
+                        <span class="user-name">${currentUser.username}</span>
+                        <span class="user-role">${roleText}</span>
+                    </div>
+                    <svg class="user-dropdown-arrow" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <polyline points="6 9 12 15 18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <div class="user-dropdown" id="userDropdown">
+                        <div class="dropdown-item" onclick="handleLogout()">
+                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                <polyline points="16 17 21 12 16 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                <line x1="21" y1="12" x2="9" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                            </svg>
+                            退出登录
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function toggleUserDropdown(e) {
+            e.stopPropagation();
+            const dropdown = document.getElementById('userDropdown');
+            if (dropdown) dropdown.classList.toggle('show');
+        }
+
+        document.addEventListener('click', () => {
+            const dropdown = document.getElementById('userDropdown');
+            if (dropdown) dropdown.classList.remove('show');
+        });
+
+        function handleLogout() {
+            if (confirm('确定要退出登录吗？')) {
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                window.location.href = API_BASE + '/login';
+            }
+        }
+
+        async function loadCategories() {
+            const productType = document.getElementById('productType').value;
+            try {
+                const resp = await apiFetch(`/api/categories?type=${productType}`);
+                categoriesData = resp.categories || {};
+                const mainCatSelect = document.getElementById('mainCategory');
+                mainCatSelect.innerHTML = '<option value="">全部</option>';
+                Object.keys(categoriesData).forEach(cat => {
+                    const option = document.createElement('option');
+                    option.value = cat;
+                    option.textContent = cat;
+                    mainCatSelect.appendChild(option);
+                });
+                document.getElementById('subCategory').innerHTML = '<option value="">全部</option>';
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function loadSubCategories() {
+            const productType = document.getElementById('productType').value;
+            const mainCategory = document.getElementById('mainCategory').value;
+            const subCatSelect = document.getElementById('subCategory');
+            subCatSelect.innerHTML = '<option value="">全部</option>';
+            
+            if (!mainCategory) return;
+            
+            const subs = categoriesData[mainCategory] || [];
+            subs.forEach(sub => {
+                const option = document.createElement('option');
+                option.value = sub;
+                option.textContent = sub;
+                subCatSelect.appendChild(option);
+            });
+        }
+
+        async function loadProducts() {
+            const grid = document.getElementById('productsGrid');
+            const emptyState = document.getElementById('emptyState');
+            
+            grid.innerHTML = `
+                <div class="loading-state">
+                    <div class="loading-spinner"></div>
+                    <p>加载中...</p>
+                </div>
+            `;
+            emptyState.style.display = 'none';
+
+            const params = new URLSearchParams();
+            params.set('product_type', document.getElementById('productType').value);
+            
+            const mainCategory = document.getElementById('mainCategory').value;
+            if (mainCategory) params.set('main_category', mainCategory);
+            
+            const subCategory = document.getElementById('subCategory').value;
+            if (subCategory) params.set('sub_category', subCategory);
+            
+            const keyword = document.getElementById('searchKeyword').value.trim();
+            if (keyword) params.set('keyword', keyword);
+
+            try {
+                const resp = await apiFetch(`/api/supplier-products?${params.toString()}`);
+                const products = resp.products || [];
+                
+                if (products.length === 0) {
+                    grid.innerHTML = '';
+                    emptyState.style.display = 'flex';
+                    return;
+                }
+
+                grid.innerHTML = products.map(p => `
+                    <div class="product-card" onclick="showProductDetail(${p.id})">
+                        <div class="product-header">
+                            <span class="product-tag ${p.product_type === 'service' ? 'service' : 'goods'}">
+                                ${p.product_type === 'service' ? '服务' : '货物'}
+                            </span>
+                            <span class="product-tag category">${p.main_category || '未分类'}</span>
+                        </div>
+                        <div class="product-title">${p.title}</div>
+                        <div class="product-spec">${p.spec || '规格未填写'}</div>
+                        <div class="product-price">
+                            <span class="price-value">¥${p.price.toFixed(2)}</span>
+                            <span class="price-unit">/${p.unit || '件'}</span>
+                        </div>
+                        <div class="product-meta">
+                            <div class="meta-item">
+                                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" stroke="currentColor" stroke-width="2"/>
+                                    <circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="2"/>
+                                </svg>
+                                ${p.supplier_name || '未知供应商'}
+                            </div>
+                            <div class="meta-item">
+                                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" stroke="currentColor" stroke-width="2"/>
+                                    <line x1="3" y1="6" x2="21" y2="6" stroke="currentColor" stroke-width="2"/>
+                                    <path d="M16 10a4 4 0 01-8 0" stroke="currentColor" stroke-width="2"/>
+                                </svg>
+                                起订量: ${p.min_order}${p.unit || ''}
+                            </div>
+                        </div>
+                        <div class="product-actions">
+                            <button class="btn btn-primary" onclick="event.stopPropagation(); createRFQ(${p.id})">询价采购</button>
+                            <button class="btn btn-secondary" onclick="event.stopPropagation(); showProductDetail(${p.id})">查看详情</button>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (e) {
+                console.error(e);
+                grid.innerHTML = '<div class="error-state">加载失败，请重试</div>';
+            }
+        }
+
+        function resetFilters() {
+            document.getElementById('productType').value = 'goods';
+            document.getElementById('mainCategory').value = '';
+            document.getElementById('subCategory').value = '';
+            document.getElementById('searchKeyword').value = '';
+            loadCategories();
+            loadProducts();
+        }
+
+        async function showProductDetail(productId) {
+            try {
+                const resp = await apiFetch(`/api/supplier-products/${productId}`);
+                const p = resp.product;
+                
+                document.getElementById('modalTitle').textContent = p.title;
+                document.getElementById('modalBody').innerHTML = `
+                    <div class="detail-row">
+                        <span class="detail-label">商品类型</span>
+                        <span class="detail-value">${p.product_type === 'service' ? '服务' : '货物'}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">分类</span>
+                        <span class="detail-value">${p.main_category || ''} / ${p.sub_category || ''}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">规格参数</span>
+                        <span class="detail-value">${p.spec || '未填写'}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">单价</span>
+                        <span class="detail-value price">¥${p.price.toFixed(2)}/${p.unit || '件'}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">起订量</span>
+                        <span class="detail-value">${p.min_order}${p.unit || ''}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">批量折扣</span>
+                        <span class="detail-value">${p.bulk_discount || '无'}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">交货周期</span>
+                        <span class="detail-value">${p.delivery_cycle || '未填写'}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">质保天数</span>
+                        <span class="detail-value">${p.warranty_days}天</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">供应商</span>
+                        <span class="detail-value">${p.supplier_name || '未知供应商'}</span>
+                    </div>
+                    <div class="detail-row full">
+                        <span class="detail-label">商品描述</span>
+                        <div class="detail-text">${p.description || '暂无描述'}</div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-primary" onclick="createRFQ(${p.id}); closeModal()">立即询价</button>
+                        <button class="btn btn-secondary" onclick="closeModal()">关闭</button>
+                    </div>
+                `;
+                
+                document.getElementById('productModal').style.display = 'flex';
+            } catch (e) {
+                console.error(e);
+                alert('获取商品详情失败');
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('productModal').style.display = 'none';
+        }
+
+        async function createRFQ(productId) {
+            if (!currentUser) {
+                alert('请先登录');
+                return;
+            }
+            
+            try {
+                const resp = await apiFetch(`/api/supplier-products/${productId}`);
+                const p = resp.product;
+                
+                const quantity = prompt('请输入采购数量：', p.min_order);
+                if (quantity === null) return;
+                
+                const data = {
+                    product_type: p.product_type,
+                    title: p.title,
+                    spec: p.spec,
+                    quantity: parseInt(quantity) || 1,
+                    unit: p.unit,
+                    expected_price: p.price * (parseInt(quantity) || 1),
+                    delivery_requirement: '',
+                    assigned_supplier_id: p.supplier_id,
+                };
+                
+                await apiFetch('/api/rfq', {
+                    method: 'POST',
+                    body: JSON.stringify(data)
+                });
+                
+                alert('询价单已提交！');
+            } catch (e) {
+                console.error(e);
+                alert('提交询价单失败');
+            }
+        }
+
+        async function apiFetch(url, options = {}) {
+            const token = localStorage.getItem('token');
+            const headers = {
+                'Content-Type': 'application/json',
+                ...options.headers
+            };
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+            const resp = await fetch(`${API_BASE}${url}`, { ...options, headers });
+            return await resp.json();
+        }
+
+        window.addEventListener('DOMContentLoaded', async () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const typeParam = urlParams.get('type');
+            if (typeParam && ['goods', 'service'].includes(typeParam)) {
+                document.getElementById('productType').value = typeParam;
+            }
+            const isAuthed = await checkAuth();
+            if (isAuthed) {
+                await loadCategories();
+                await loadProducts();
+            }
+        });
+    </script>
+</body>
+</html>

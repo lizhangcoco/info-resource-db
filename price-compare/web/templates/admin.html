@@ -1,0 +1,1128 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理后台 - 绿通采购货物比价参考平台</title>
+    <link rel="stylesheet" href="/bijia/static/css/style.css">
+</head>
+<body class="admin-body">
+    <div class="admin-container">
+        <aside class="admin-sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M3 3H5L5.4 5M7 13H17L19 5H5.4M7 13L5.4 5M7 13L4.5 15.5C4.1 15.9 3.8 16.5 4 17C4.2 17.5 4.8 18 5.5 18H18" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <circle cx="9" cy="20" r="1.5" fill="white"/>
+                        <circle cx="18" cy="20" r="1.5" fill="white"/>
+                    </svg>
+                </div>
+                <span>绿通采购比价平台</span>
+            </div>
+            <nav class="sidebar-nav">
+                <button class="nav-item active" onclick="switchPage('users')">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" stroke="currentColor" stroke-width="2"/>
+                        <circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="2"/>
+                        <path d="M23 21v-2a4 4 0 00-3-3.87" stroke="currentColor" stroke-width="2"/>
+                        <path d="M16 3.13a4 4 0 010 7.75" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                    用户管理
+                </button>
+                <button class="nav-item" onclick="switchPage('suppliers')">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                    供应商管理
+                </button>
+                <button class="nav-item" onclick="switchPage('products')">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                    商品管理
+                </button>
+                <button class="nav-item" onclick="switchPage('rfq')">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke="currentColor" stroke-width="2"/>
+                        <polyline points="14 2 14 8 20 8" stroke="currentColor" stroke-width="2"/>
+                        <line x1="16" y1="13" x2="8" y2="13" stroke="currentColor" stroke-width="2"/>
+                        <line x1="16" y1="17" x2="8" y2="17" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                    询价单管理
+                </button>
+            </nav>
+            <div class="sidebar-footer">
+                <button class="nav-item logout-btn" onclick="logout()">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" stroke="currentColor" stroke-width="2"/>
+                        <polyline points="16 17 21 12 16 7" stroke="currentColor" stroke-width="2"/>
+                        <line x1="21" y1="12" x2="9" y2="12" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                    退出登录
+                </button>
+            </div>
+        </aside>
+
+        <main class="admin-content">
+            <header class="admin-header">
+                <h2 id="pageTitle">用户管理</h2>
+                <div class="header-user">
+                    <span id="currentUser">管理员</span>
+                </div>
+            </header>
+
+            <!-- 用户管理页面 -->
+            <div id="page-users" class="page-content">
+                <div class="page-actions">
+                    <button class="btn btn-primary" onclick="showUserModal()">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <line x1="12" y1="5" x2="12" y2="19" stroke="white" stroke-width="2"/>
+                            <line x1="5" y1="12" x2="19" y2="12" stroke="white" stroke-width="2"/>
+                        </svg>
+                        添加用户
+                    </button>
+                    <div class="search-box">
+                        <input type="text" id="userSearch" placeholder="搜索用户名..." oninput="loadUsers()">
+                    </div>
+                </div>
+                <div class="data-table-wrap">
+                    <table class="data-table" id="usersTable">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>用户名</th>
+                                <th>公司名称</th>
+                                <th>电话</th>
+                                <th>角色</th>
+                                <th>状态</th>
+                                <th>会员到期</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 供应商管理页面 -->
+            <div id="page-suppliers" class="page-content" style="display: none;">
+                <div class="page-actions">
+                    <button class="btn btn-primary" onclick="showSupplierModal()">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <line x1="12" y1="5" x2="12" y2="19" stroke="white" stroke-width="2"/>
+                            <line x1="5" y1="12" x2="19" y2="12" stroke="white" stroke-width="2"/>
+                        </svg>
+                        添加供应商
+                    </button>
+                    <div class="filter-group">
+                        <select id="supplierStatusFilter" onchange="loadSuppliers()">
+                            <option value="">全部状态</option>
+                            <option value="pending">待审核</option>
+                            <option value="approved">已审核</option>
+                            <option value="rejected">已拒绝</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="data-table-wrap">
+                    <table class="data-table" id="suppliersTable">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>供应商名称</th>
+                                <th>联系人</th>
+                                <th>电话</th>
+                                <th>信用等级</th>
+                                <th>状态</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 商品管理页面 -->
+            <div id="page-products" class="page-content" style="display: none;">
+                <div class="page-actions">
+                    <button class="btn btn-primary" onclick="showProductModal()">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <line x1="12" y1="5" x2="12" y2="19" stroke="white" stroke-width="2"/>
+                            <line x1="5" y1="12" x2="19" y2="12" stroke="white" stroke-width="2"/>
+                        </svg>
+                        添加商品
+                    </button>
+                    <button class="btn btn-secondary" onclick="showImportModal()">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <polyline points="17 8 12 3 7 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <line x1="12" y1="3" x2="12" y2="15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        批量导入
+                    </button>
+                    <button class="btn btn-ghost" onclick="downloadTemplate()">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke="currentColor" stroke-width="2"/>
+                            <polyline points="14 2 14 8 20 8" stroke="currentColor" stroke-width="2"/>
+                            <line x1="12" y1="18" x2="12" y2="12" stroke="currentColor" stroke-width="2"/>
+                            <polyline points="9 15 12 18 15 15" stroke="currentColor" stroke-width="2"/>
+                        </svg>
+                        下载模板
+                    </button>
+                </div>
+                <div class="data-table-wrap">
+                    <table class="data-table" id="productsTable">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>商品名称</th>
+                                <th>类型</th>
+                                <th>分类</th>
+                                <th>供应商</th>
+                                <th>价格</th>
+                                <th>单位</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 询价单管理页面 -->
+            <div id="page-rfq" class="page-content" style="display: none;">
+                <div class="page-actions">
+                    <div class="filter-group">
+                        <select id="rfqStatusFilter" onchange="loadRFQ()">
+                            <option value="">全部状态</option>
+                            <option value="pending">待报价</option>
+                            <option value="quoted">已报价</option>
+                            <option value="accepted">已接受</option>
+                            <option value="completed">已完成</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="data-table-wrap">
+                    <table class="data-table" id="rfqTable">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>商品名称</th>
+                                <th>类型</th>
+                                <th>数量</th>
+                                <th>期望价格</th>
+                                <th>状态</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- 用户编辑弹窗 -->
+    <div id="userModal" class="modal">
+        <div class="modal-backdrop" onclick="closeModal('userModal')"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="userModalTitle">添加用户</h3>
+                <button class="modal-close" onclick="closeModal('userModal')">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2"/>
+                        <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="userForm" onsubmit="saveUser(event)">
+                    <input type="hidden" id="userId">
+                    <div class="form-group">
+                        <label class="form-label">用户名</label>
+                        <input type="text" id="userName" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">密码</label>
+                        <input type="password" id="userPassword" placeholder="不填则不修改">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">公司名称</label>
+                        <input type="text" id="userCompany">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">角色</label>
+                        <select id="userRole">
+                            <option value="buyer">采购人</option>
+                            <option value="admin">管理员</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">状态</label>
+                        <select id="userStatus">
+                            <option value="active">正常</option>
+                            <option value="disabled">停用</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary">保存</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 供应商编辑弹窗 -->
+    <div id="supplierModal" class="modal">
+        <div class="modal-backdrop" onclick="closeModal('supplierModal')"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="supplierModalTitle">添加供应商</h3>
+                <button class="modal-close" onclick="closeModal('supplierModal')">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2"/>
+                        <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="supplierForm" onsubmit="saveSupplier(event)">
+                    <input type="hidden" id="supplierId">
+                    <div class="form-group">
+                        <label class="form-label">供应商名称</label>
+                        <input type="text" id="supplierName" required>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">联系人</label>
+                            <input type="text" id="supplierContact">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">联系电话</label>
+                            <input type="tel" id="supplierPhone">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">邮箱</label>
+                        <input type="email" id="supplierEmail">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">地址</label>
+                        <input type="text" id="supplierAddress">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">信用等级</label>
+                            <select id="supplierCredit">
+                                <option value="A">A</option>
+                                <option value="B">B</option>
+                                <option value="C">C</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">报价有效期(天)</label>
+                            <input type="number" id="supplierValidDays" value="30">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">付款方式</label>
+                        <input type="text" id="supplierPayment">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">资质证书</label>
+                        <textarea id="supplierQualifications" rows="3"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">保存</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 商品编辑弹窗 -->
+    <div id="productModal" class="modal">
+        <div class="modal-backdrop" onclick="closeModal('productModal')"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="productModalTitle">添加商品</h3>
+                <button class="modal-close" onclick="closeModal('productModal')">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2"/>
+                        <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="productForm" onsubmit="saveProduct(event)">
+                    <input type="hidden" id="productId">
+                    <div class="form-group">
+                        <label class="form-label">供应商</label>
+                        <select id="productSupplier"></select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">商品类型</label>
+                        <select id="productType" onchange="loadProductCategories()">
+                            <option value="goods">货物</option>
+                            <option value="service">服务</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">一级分类</label>
+                        <select id="productMainCategory" onchange="loadProductSubCategories()"></select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">二级分类</label>
+                        <select id="productSubCategory"></select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">商品名称</label>
+                        <input type="text" id="productTitle" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">规格</label>
+                        <input type="text" id="productSpec">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">价格</label>
+                            <input type="number" id="productPrice" step="0.01" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">单位</label>
+                            <input type="text" id="productUnit">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">起订量</label>
+                            <input type="number" id="productMinOrder" value="1">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">关键词</label>
+                        <input type="text" id="productKeyword">
+                    </div>
+                    <button type="submit" class="btn btn-primary">保存</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 报价弹窗 -->
+    <div id="quoteModal" class="modal">
+        <div class="modal-backdrop" onclick="closeModal('quoteModal')"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>供应商报价</h3>
+                <button class="modal-close" onclick="closeModal('quoteModal')">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2"/>
+                        <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="quoteRfqId">
+                <div class="form-group">
+                    <label class="form-label">报价金额</label>
+                    <input type="number" id="quoteAmount" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">报价说明</label>
+                    <textarea id="quoteResponse" rows="3"></textarea>
+                </div>
+                <button class="btn btn-primary" onclick="submitQuote()">提交报价</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 批量导入弹窗 -->
+    <div id="importModal" class="modal">
+        <div class="modal-backdrop" onclick="closeModal('importModal')"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>批量导入供应商商品</h3>
+                <button class="modal-close" onclick="closeModal('importModal')">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2"/>
+                        <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="import-tips">
+                    <p><strong>导入说明：</strong></p>
+                    <ul>
+                        <li>支持 Excel (.xlsx) 和 CSV 格式文件</li>
+                        <li>带 <span class="required">*</span> 的字段为必填项</li>
+                        <li>供应商名称必须与系统中已有的供应商完全一致</li>
+                        <li>商品类型：goods=货物，service=服务</li>
+                        <li>状态：active=启用，inactive=禁用</li>
+                    </ul>
+                    <button class="btn btn-ghost" onclick="downloadTemplate()" style="margin-top: 12px;">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 16px; height: 16px;">
+                            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke="currentColor" stroke-width="2"/>
+                            <polyline points="14 2 14 8 20 8" stroke="currentColor" stroke-width="2"/>
+                            <line x1="12" y1="18" x2="12" y2="12" stroke="currentColor" stroke-width="2"/>
+                            <polyline points="9 15 12 18 15 15" stroke="currentColor" stroke-width="2"/>
+                        </svg>
+                        下载导入模板
+                    </button>
+                </div>
+                <div class="form-group" style="margin-top: 20px;">
+                    <label class="form-label">选择文件</label>
+                    <div class="file-upload-area" id="fileUploadArea" onclick="triggerFileInput()">
+                        <input type="file" id="importFile" accept=".xlsx,.xls,.csv" onchange="handleFileSelect(event)" style="display: none;">
+                        <div id="fileUploadPlaceholder">
+                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 48px; height: 48px; opacity: 0.5;">
+                                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" stroke="currentColor" stroke-width="2"/>
+                                <polyline points="17 8 12 3 7 8" stroke="currentColor" stroke-width="2"/>
+                                <line x1="12" y1="3" x2="12" y2="15" stroke="currentColor" stroke-width="2"/>
+                            </svg>
+                            <p>点击选择文件或拖拽文件到此处</p>
+                            <p style="font-size: 12px; opacity: 0.6;">支持 .xlsx, .xls, .csv 格式</p>
+                        </div>
+                        <div id="selectedFileInfo" style="display: none;">
+                            <p id="selectedFileName"></p>
+                            <p style="font-size: 12px; opacity: 0.6;" id="selectedFileSize"></p>
+                        </div>
+                    </div>
+                </div>
+                <div id="importResult" style="display: none; margin-top: 16px;">
+                    <div class="import-stats">
+                        <div class="stat-item">
+                            <span class="stat-label">成功导入</span>
+                            <span class="stat-value success" id="importSuccessCount">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">失败</span>
+                            <span class="stat-value error" id="importErrorCount">0</span>
+                        </div>
+                    </div>
+                    <div id="importErrors" class="import-errors" style="display: none;">
+                        <p style="font-weight: 600; margin-bottom: 8px;">错误详情：</p>
+                        <ul id="importErrorList"></ul>
+                    </div>
+                </div>
+                <div style="margin-top: 24px; display: flex; gap: 12px;">
+                    <button class="btn btn-primary" id="importBtn" onclick="startImport()" disabled>开始导入</button>
+                    <button class="btn btn-ghost" onclick="closeModal('importModal')">取消</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        window.API_BASE = '/bijia';
+        let currentPage = 'users';
+
+        async function fetchData(url, options = {}) {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                console.error('No token found in localStorage');
+                window.location.href = API_BASE + '/login';
+                return null;
+            }
+            const headers = {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+                ...(options.headers || {})
+            };
+            try {
+                const resp = await fetch(`${API_BASE}${url}`, { ...options, headers });
+                if (resp.status === 401) {
+                    console.error('API returned 401, redirecting to login');
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('user');
+                    window.location.href = API_BASE + '/login';
+                    return null;
+                }
+                if (!resp.ok) {
+                    console.error('API error:', resp.status, resp.statusText);
+                    return null;
+                }
+                return await resp.json();
+            } catch (e) {
+                console.error('Fetch error:', e);
+                return null;
+            }
+        }
+
+        function switchPage(page) {
+            currentPage = page;
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            document.querySelector(`button[onclick="switchPage('${page}')"]`).classList.add('active');
+            
+            document.querySelectorAll('.page-content').forEach(el => el.style.display = 'none');
+            document.getElementById(`page-${page}`).style.display = 'block';
+
+            const titles = { users: '用户管理', suppliers: '供应商管理', products: '商品管理', rfq: '询价单管理' };
+            document.getElementById('pageTitle').innerHTML = titles[page];
+
+            if (page === 'users') loadUsers();
+            else if (page === 'suppliers') loadSuppliers();
+            else if (page === 'products') loadProducts();
+            else if (page === 'rfq') loadRFQ();
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = API_BASE + '/login';
+        }
+
+        async function loadUsers() {
+            const search = document.getElementById('userSearch').value;
+            const data = await fetchData(`/api/users?limit=100`);
+            if (!data) return;
+            
+            const tbody = document.querySelector('#usersTable tbody');
+            tbody.innerHTML = data.users.map(u => `
+                <tr>
+                    <td>${u.id}</td>
+                    <td>${u.username}</td>
+                    <td>${u.company_name || '-'}</td>
+                    <td>${u.phone || '-'}</td>
+                    <td>${u.role === 'admin' ? '管理员' : u.role === 'supplier' ? '供应商' : '采购人'}</td>
+                    <td>${u.status === 'active' ? '<span class="status-badge active">正常</span>' : '<span class="status-badge disabled">停用</span>'}</td>
+                    <td>${u.member_expire_at || '-'}</td>
+                    <td>
+                        <button class="action-btn edit" onclick="editUser(${u.id})">编辑</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function showUserModal(userId = null) {
+            document.getElementById('userModal').style.display = 'flex';
+            document.getElementById('userModalTitle').innerHTML = userId ? '编辑用户' : '添加用户';
+            document.getElementById('userId').value = userId || '';
+            
+            if (userId) {
+                fetchData(`/api/users/${userId}`).then(data => {
+                    if (data) {
+                        document.getElementById('userName').value = data.user.username;
+                        document.getElementById('userCompany').value = data.user.company_name || '';
+                        document.getElementById('userRole').value = data.user.role;
+                        document.getElementById('userStatus').value = data.user.status;
+                        document.getElementById('userPassword').value = '';
+                    }
+                });
+            } else {
+                document.getElementById('userName').value = '';
+                document.getElementById('userCompany').value = '';
+                document.getElementById('userRole').value = 'buyer';
+                document.getElementById('userStatus').value = 'active';
+                document.getElementById('userPassword').value = '';
+            }
+        }
+
+        function editUser(userId) {
+            showUserModal(userId);
+        }
+
+        async function saveUser(e) {
+            e.preventDefault();
+            const id = document.getElementById('userId').value;
+            const data = {
+                username: document.getElementById('userName').value,
+                company_name: document.getElementById('userCompany').value,
+                role: document.getElementById('userRole').value,
+                status: document.getElementById('userStatus').value,
+            };
+            const password = document.getElementById('userPassword').value;
+
+            if (id) {
+                if (password) data.password = password;
+                await fetchData(`/api/users/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+            } else {
+                if (!password) {
+                    alert('请输入密码');
+                    return;
+                }
+                data.password = password;
+                await fetchData('/api/auth/register', { method: 'POST', body: JSON.stringify(data) });
+            }
+            
+            closeModal('userModal');
+            loadUsers();
+        }
+
+        async function loadSuppliers() {
+            const status = document.getElementById('supplierStatusFilter').value;
+            const data = await fetchData(`/api/suppliers?status=${status || ''}&limit=100`);
+            if (!data) return;
+            
+            const tbody = document.querySelector('#suppliersTable tbody');
+            tbody.innerHTML = data.suppliers.map(s => `
+                <tr>
+                    <td>${s.id}</td>
+                    <td>${s.name}</td>
+                    <td>${s.contact_name || '-'}</td>
+                    <td>${s.contact_phone || '-'}</td>
+                    <td>${s.credit_rating}</td>
+                    <td>${getStatusBadge(s.status)}</td>
+                    <td>
+                        <button class="action-btn edit" onclick="editSupplier(${s.id})">编辑</button>
+                        ${s.status === 'pending' ? `
+                            <button class="action-btn approve" onclick="approveSupplier(${s.id})">通过</button>
+                            <button class="action-btn reject" onclick="rejectSupplier(${s.id})">拒绝</button>
+                        ` : ''}
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function getStatusBadge(status) {
+            const map = {
+                pending: '<span class="status-badge pending">待审核</span>',
+                approved: '<span class="status-badge approved">已审核</span>',
+                rejected: '<span class="status-badge rejected">已拒绝</span>'
+            };
+            return map[status] || status;
+        }
+
+        function showSupplierModal(supplierId = null) {
+            document.getElementById('supplierModal').style.display = 'flex';
+            document.getElementById('supplierModalTitle').innerHTML = supplierId ? '编辑供应商' : '添加供应商';
+            document.getElementById('supplierId').value = supplierId || '';
+
+            if (supplierId) {
+                fetchData(`/api/suppliers/${supplierId}`).then(data => {
+                    if (data) {
+                        document.getElementById('supplierName').value = data.supplier.name;
+                        document.getElementById('supplierContact').value = data.supplier.contact_name || '';
+                        document.getElementById('supplierPhone').value = data.supplier.contact_phone || '';
+                        document.getElementById('supplierEmail').value = data.supplier.contact_email || '';
+                        document.getElementById('supplierAddress').value = data.supplier.address || '';
+                        document.getElementById('supplierCredit').value = data.supplier.credit_rating;
+                        document.getElementById('supplierValidDays').value = data.supplier.price_valid_days;
+                        document.getElementById('supplierPayment').value = data.supplier.payment_terms || '';
+                        document.getElementById('supplierQualifications').value = data.supplier.qualifications || '';
+                    }
+                });
+            } else {
+                document.querySelectorAll('#supplierForm input, #supplierForm select, #supplierForm textarea').forEach(el => el.value = '');
+                document.getElementById('supplierCredit').value = 'A';
+                document.getElementById('supplierValidDays').value = '30';
+            }
+        }
+
+        function editSupplier(id) {
+            showSupplierModal(id);
+        }
+
+        async function saveSupplier(e) {
+            e.preventDefault();
+            const id = document.getElementById('supplierId').value;
+            const data = {
+                name: document.getElementById('supplierName').value,
+                contact_name: document.getElementById('supplierContact').value,
+                contact_phone: document.getElementById('supplierPhone').value,
+                contact_email: document.getElementById('supplierEmail').value,
+                address: document.getElementById('supplierAddress').value,
+                credit_rating: document.getElementById('supplierCredit').value,
+                price_valid_days: parseInt(document.getElementById('supplierValidDays').value),
+                payment_terms: document.getElementById('supplierPayment').value,
+                qualifications: document.getElementById('supplierQualifications').value,
+            };
+
+            if (id) {
+                await fetchData(`/api/suppliers/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+            } else {
+                await fetchData('/api/suppliers', { method: 'POST', body: JSON.stringify(data) });
+            }
+            
+            closeModal('supplierModal');
+            loadSuppliers();
+        }
+
+        async function approveSupplier(id) {
+            if (confirm('确定要审核通过该供应商吗？')) {
+                await fetchData(`/api/suppliers/${id}/approve`, { method: 'POST' });
+                loadSuppliers();
+            }
+        }
+
+        async function rejectSupplier(id) {
+            const remark = prompt('请输入拒绝原因（可选）：', '');
+            if (remark !== null) {
+                await fetchData(`/api/suppliers/${id}/reject`, {
+                    method: 'POST',
+                    body: JSON.stringify({ remark })
+                });
+                loadSuppliers();
+            }
+        }
+
+        async function loadProducts() {
+            const data = await fetchData('/api/supplier-products?limit=100');
+            if (!data) return;
+
+            const suppliers = await fetchData('/api/suppliers?limit=100');
+            const supplierMap = {};
+            if (suppliers) {
+                suppliers.suppliers.forEach(s => supplierMap[s.id] = s.name);
+            }
+
+            const tbody = document.querySelector('#productsTable tbody');
+            tbody.innerHTML = data.products.map(p => `
+                <tr>
+                    <td>${p.id}</td>
+                    <td>${p.title}</td>
+                    <td>${p.product_type === 'goods' ? '货物' : '服务'}</td>
+                    <td>${p.main_category || '-'} / ${p.sub_category || '-'}</td>
+                    <td>${supplierMap[p.supplier_id] || '-'}</td>
+                    <td>¥${p.price}</td>
+                    <td>${p.unit || '-'}</td>
+                    <td>
+                        <button class="action-btn edit" onclick="editProduct(${p.id})">编辑</button>
+                        <button class="action-btn delete" onclick="deleteProduct(${p.id})">删除</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function showProductModal(productId = null) {
+            document.getElementById('productModal').style.display = 'flex';
+            document.getElementById('productModalTitle').innerHTML = productId ? '编辑商品' : '添加商品';
+            document.getElementById('productId').value = productId || '';
+
+            fetchData('/api/suppliers?limit=100').then(data => {
+                if (data) {
+                    const select = document.getElementById('productSupplier');
+                    select.innerHTML = data.suppliers.map(s => 
+                        `<option value="${s.id}">${s.name}</option>`
+                    ).join('');
+                }
+            });
+
+            if (productId) {
+                fetchData(`/api/supplier-products/${productId}`).then(async data => {
+                    if (data) {
+                        document.getElementById('productSupplier').value = data.product.supplier_id;
+                        document.getElementById('productType').value = data.product.product_type;
+                        await loadProductCategories();
+                        document.getElementById('productMainCategory').value = data.product.main_category || '';
+                        await loadProductSubCategories();
+                        document.getElementById('productSubCategory').value = data.product.sub_category || '';
+                        document.getElementById('productTitle').value = data.product.title;
+                        document.getElementById('productSpec').value = data.product.spec || '';
+                        document.getElementById('productPrice').value = data.product.price;
+                        document.getElementById('productUnit').value = data.product.unit || '';
+                        document.getElementById('productMinOrder').value = data.product.min_order;
+                        document.getElementById('productKeyword').value = data.product.keyword || '';
+                    }
+                });
+            } else {
+                document.querySelectorAll('#productForm input, #productForm select').forEach(el => el.value = '');
+                document.getElementById('productType').value = 'goods';
+                document.getElementById('productMinOrder').value = '1';
+                loadProductCategories();
+            }
+        }
+
+        function editProduct(id) {
+            showProductModal(id);
+        }
+
+        async function loadProductCategories() {
+            const productType = document.getElementById('productType').value;
+            const data = await fetchData(`/api/categories?type=${productType}`);
+            if (!data) return;
+            
+            const mainCatSelect = document.getElementById('productMainCategory');
+            mainCatSelect.innerHTML = '<option value="">请选择</option>';
+            Object.keys(data.categories || {}).forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat;
+                option.textContent = cat;
+                mainCatSelect.appendChild(option);
+            });
+            document.getElementById('productSubCategory').innerHTML = '<option value="">请选择</option>';
+        }
+
+        async function loadProductSubCategories() {
+            const productType = document.getElementById('productType').value;
+            const mainCategory = document.getElementById('productMainCategory').value;
+            const subCatSelect = document.getElementById('productSubCategory');
+            subCatSelect.innerHTML = '<option value="">请选择</option>';
+            
+            if (!mainCategory) return;
+            
+            const data = await fetchData(`/api/categories?type=${productType}&main_category=${encodeURIComponent(mainCategory)}`);
+            if (data && data.sub_categories) {
+                data.sub_categories.forEach(sub => {
+                    const option = document.createElement('option');
+                    option.value = sub;
+                    option.textContent = sub;
+                    subCatSelect.appendChild(option);
+                });
+            }
+        }
+
+        async function saveProduct(e) {
+            e.preventDefault();
+            const id = document.getElementById('productId').value;
+            const data = {
+                supplier_id: parseInt(document.getElementById('productSupplier').value),
+                product_type: document.getElementById('productType').value,
+                main_category: document.getElementById('productMainCategory').value,
+                sub_category: document.getElementById('productSubCategory').value,
+                title: document.getElementById('productTitle').value,
+                spec: document.getElementById('productSpec').value,
+                price: parseFloat(document.getElementById('productPrice').value),
+                unit: document.getElementById('productUnit').value,
+                min_order: parseInt(document.getElementById('productMinOrder').value),
+                keyword: document.getElementById('productKeyword').value,
+            };
+
+            if (id) {
+                await fetchData(`/api/supplier-products/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+            } else {
+                await fetchData('/api/supplier-products', { method: 'POST', body: JSON.stringify(data) });
+            }
+            
+            closeModal('productModal');
+            loadProducts();
+        }
+
+        async function deleteProduct(id) {
+            if (confirm('确定删除该商品？')) {
+                await fetchData(`/api/supplier-products/${id}`, { method: 'DELETE' });
+                loadProducts();
+            }
+        }
+
+        async function loadRFQ() {
+            const status = document.getElementById('rfqStatusFilter').value;
+            const data = await fetchData(`/api/rfq?status=${status || ''}&limit=100`);
+            if (!data) return;
+
+            const tbody = document.querySelector('#rfqTable tbody');
+            tbody.innerHTML = data.rfqs.map(r => `
+                <tr>
+                    <td>${r.id}</td>
+                    <td>${r.title}</td>
+                    <td>${r.product_type === 'goods' ? '货物' : '服务'}</td>
+                    <td>${r.quantity} ${r.unit || ''}</td>
+                    <td>¥${r.expected_price}</td>
+                    <td>${getRFQStatusBadge(r.status)}</td>
+                    <td>
+                        ${r.status === 'pending' ? `<button class="action-btn approve" onclick="showQuoteModal(${r.id})">报价</button>` : ''}
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function getRFQStatusBadge(status) {
+            const map = {
+                draft: '<span class="status-badge pending">草稿</span>',
+                pending: '<span class="status-badge warning">待报价</span>',
+                quoted: '<span class="status-badge approved">已报价</span>',
+                accepted: '<span class="status-badge active">已接受</span>',
+                completed: '<span class="status-badge success">已完成</span>'
+            };
+            return map[status] || status;
+        }
+
+        function showQuoteModal(rfqId) {
+            document.getElementById('quoteModal').style.display = 'flex';
+            document.getElementById('quoteRfqId').value = rfqId;
+            document.getElementById('quoteAmount').value = '';
+            document.getElementById('quoteResponse').value = '';
+        }
+
+        async function submitQuote() {
+            const rfqId = document.getElementById('quoteRfqId').value;
+            const data = {
+                supplier_quote: parseFloat(document.getElementById('quoteAmount').value),
+                quote_response: document.getElementById('quoteResponse').value,
+            };
+            await fetchData(`/api/rfq/${rfqId}/quote`, { method: 'POST', body: JSON.stringify(data) });
+            closeModal('quoteModal');
+            loadRFQ();
+        }
+
+        function showImportModal() {
+            document.getElementById('importModal').style.display = 'flex';
+            document.getElementById('importResult').style.display = 'none';
+            document.getElementById('importBtn').disabled = true;
+            document.getElementById('fileUploadPlaceholder').style.display = 'block';
+            document.getElementById('selectedFileInfo').style.display = 'none';
+            document.getElementById('importFile').value = '';
+        }
+
+        async function downloadTemplate() {
+            try {
+                const token = localStorage.getItem('token');
+                const url = `${API_BASE}/api/supplier-products/import/template`;
+                const response = await fetch(url, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!response.ok) throw new Error('下载失败');
+                const blob = await response.blob();
+                const downloadUrl = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = downloadUrl;
+                link.download = '供应商商品导入模板.xlsx';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                window.URL.revokeObjectURL(downloadUrl);
+            } catch (e) {
+                alert('下载模板失败: ' + e.message);
+            }
+        }
+
+        function triggerFileInput() {
+            document.getElementById('importFile').click();
+        }
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const validTypes = ['.xlsx', '.xls', '.csv'];
+            const fileName = file.name.toLowerCase();
+            const isValid = validTypes.some(type => fileName.endsWith(type));
+
+            if (!isValid) {
+                alert('请选择 Excel (.xlsx, .xls) 或 CSV 文件');
+                event.target.value = '';
+                return;
+            }
+
+            document.getElementById('fileUploadPlaceholder').style.display = 'none';
+            document.getElementById('selectedFileInfo').style.display = 'block';
+            document.getElementById('selectedFileName').textContent = file.name;
+            document.getElementById('selectedFileSize').textContent = formatFileSize(file.size);
+            document.getElementById('importBtn').disabled = false;
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        }
+
+        async function startImport() {
+            const fileInput = document.getElementById('importFile');
+            const file = fileInput.files[0];
+            if (!file) {
+                alert('请先选择文件');
+                return;
+            }
+
+            const importBtn = document.getElementById('importBtn');
+            importBtn.disabled = true;
+            importBtn.textContent = '导入中...';
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`${API_BASE}/api/supplier-products/import`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    document.getElementById('importResult').style.display = 'block';
+                    document.getElementById('importSuccessCount').textContent = 0;
+                    document.getElementById('importErrorCount').textContent = result.errors ? result.errors.length : 1;
+
+                    const errorList = document.getElementById('importErrorList');
+                    const errorsDiv = document.getElementById('importErrors');
+                    errorsDiv.style.display = 'block';
+
+                    let errorHtml = `<li>${result.error || '导入失败'}</li>`;
+                    if (result.errors && result.errors.length > 0) {
+                        errorHtml += result.errors.map(e => `<li>${e}</li>`).join('');
+                    }
+                    errorList.innerHTML = errorHtml;
+                    return;
+                }
+
+                document.getElementById('importResult').style.display = 'block';
+                document.getElementById('importSuccessCount').textContent = result.success_count || 0;
+                document.getElementById('importErrorCount').textContent = result.error_count || 0;
+
+                const errorList = document.getElementById('importErrorList');
+                const errorsDiv = document.getElementById('importErrors');
+
+                if (result.errors && result.errors.length > 0) {
+                    errorsDiv.style.display = 'block';
+                    errorList.innerHTML = result.errors.map(e => `<li>${e}</li>`).join('');
+                } else {
+                    errorsDiv.style.display = 'none';
+                }
+
+                if (result.success) {
+                    loadProducts();
+                }
+
+            } catch (e) {
+                alert('导入失败: ' + e.message);
+            } finally {
+                importBtn.disabled = false;
+                importBtn.textContent = '开始导入';
+            }
+        }
+
+        async function checkAdminAuth() {
+            const token = localStorage.getItem('token');
+            const userStr = localStorage.getItem('user');
+            console.log('Checking admin auth, token exists:', !!token, 'user exists:', !!userStr);
+            
+            if (!token) {
+                console.log('No token, redirecting to login');
+                window.location.href = API_BASE + '/login';
+                return false;
+            }
+
+            try {
+                const resp = await fetch(`${API_BASE}/api/auth/me`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                console.log('Auth/me response status:', resp.status);
+                
+                if (resp.status === 401) {
+                    console.log('Token invalid, redirecting to login');
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('user');
+                    window.location.href = API_BASE + '/login';
+                    return false;
+                }
+                
+                const data = await resp.json();
+                console.log('Auth/me response data:', data);
+                
+                if (data && data.user && data.user.role === 'admin') {
+                    document.getElementById('currentUser').innerHTML = data.user.username;
+                    return true;
+                } else {
+                    console.log('User is not admin, role:', data?.user?.role);
+                    window.location.href = API_BASE + '/';
+                    return false;
+                }
+            } catch (e) {
+                console.error('Auth check error:', e);
+                window.location.href = API_BASE + '/login';
+                return false;
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', async () => {
+            const isAdmin = await checkAdminAuth();
+            if (isAdmin) {
+                switchPage('users');
+            }
+        });
+    </script>
+</body>
+</html>

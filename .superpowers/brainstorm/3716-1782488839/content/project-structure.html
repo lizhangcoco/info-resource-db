@@ -1,0 +1,117 @@
+<h2>项目结构 & 技术选型</h2>
+<p class="subtitle">清晰的目录结构，成熟的技术栈</p>
+
+<div class="section">
+  <h3>项目目录结构</h3>
+  <div style="background:#263238;border-radius:8px;padding:20px;color:#eee;font-family:monospace;font-size:13px;line-height:1.7;margin-top:12px;">
+<pre style="margin:0;">
+price-compare/                    # 项目根目录
+├── cli.py                        # CLI 入口文件
+├── app.py                        # Flask Web 应用入口
+├── requirements.txt              # Python 依赖
+├── README.md                     # 项目说明文档
+│
+├── core/                         # 核心业务逻辑
+│   ├── __init__.py
+│   ├── engine.py                 # 采集引擎 (调度器)
+│   ├── cleaner.py                # 数据清洗 & 去重
+│   ├── analyzer.py               # 对比分析 & 性价比计算
+│   └── trend.py                  # 价格趋势分析
+│
+├── collectors/                   # 采集器 (适配器模式)
+│   ├── __init__.py
+│   ├── base.py                   # 采集器基类 (接口定义)
+│   ├── jd_collector.py           # 京东采集器
+│   ├── taobao_collector.py       # 淘宝采集器
+│   ├── pinduoduo_collector.py    # 拼多多采集器
+│   └── mock_collector.py         # 模拟数据采集器 (演示用)
+│
+├── storage/                      # 数据持久层
+│   ├── __init__.py
+│   ├── database.py               # SQLite 数据库操作
+│   └── models.py                 # 数据模型定义
+│
+├── web/                          # Web 前端
+│   ├── static/
+│   │   ├── css/
+│   │   │   └── style.css         # 页面样式
+│   │   └── js/
+│   │       └── app.js            # 前端逻辑 + ECharts
+│   └── templates/
+│       └── index.html            # 主页面
+│
+├── utils/                        # 工具函数
+│   ├── __init__.py
+│   ├── logger.py                 # 日志工具
+│   └── exporters.py              # 数据导出 (JSON/CSV)
+│
+└── data/                         # 数据目录
+    ├── price_compare.db          # SQLite 数据库文件
+    └── exports/                  # 导出文件存放目录
+</pre>
+  </div>
+</div>
+
+<div class="section">
+  <h3>技术选型说明</h3>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:12px;">
+    
+    <div style="background:#f5f5f5;border-radius:8px;padding:16px;">
+      <h4 style="color:#1976d2;margin:0 0 12px 0;">🐍 后端技术</h4>
+      <ul style="font-size:13px;color:#555;padding-left:20px;margin:0;line-height:2;">
+        <li><strong>Python 3.8+</strong> — 生态丰富，爬虫库成熟</li>
+        <li><strong>Flask</strong> — 轻量级Web框架，简单灵活</li>
+        <li><strong>SQLite</strong> — 嵌入式数据库，零配置</li>
+        <li><strong>Requests + BeautifulSoup</strong> — 网页请求与解析</li>
+        <li><strong>Click</strong> — 优雅的CLI命令行框架</li>
+        <li><strong>Pydantic</strong> — 数据验证与模型定义</li>
+      </ul>
+    </div>
+    
+    <div style="background:#f5f5f5;border-radius:8px;padding:16px;">
+      <h4 style="color:#f57c00;margin:0 0 12px 0;">🎨 前端技术</h4>
+      <ul style="font-size:13px;color:#555;padding-left:20px;margin:0;line-height:2;">
+        <li><strong>HTML5 + CSS3</strong> — 原生页面，无需构建</li>
+        <li><strong>原生 JavaScript (ES6+)</strong> — 不依赖框架，部署简单</li>
+        <li><strong>ECharts</strong> — 强大的数据可视化图表库</li>
+        <li><strong>响应式设计</strong> — 适配桌面端和移动端</li>
+        <li><strong>Fetch API</strong> — 与后端异步通信</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>设计亮点</h3>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:12px;">
+    <div style="background:#e8f5e9;border-radius:8px;padding:14px;text-align:center;">
+      <div style="font-size:28px;margin-bottom:6px;">🔌</div>
+      <div style="font-size:13px;font-weight:600;color:#2e7d32;">适配器模式</div>
+      <div style="font-size:11px;color:#558b2f;margin-top:4px;">新增平台只需加一个采集器类</div>
+    </div>
+    <div style="background:#e3f2fd;border-radius:8px;padding:14px;text-align:center;">
+      <div style="font-size:28px;margin-bottom:6px;">⚡</div>
+      <div style="font-size:13px;font-weight:600;color:#1565c0;">并发采集</div>
+      <div style="font-size:11px;color:#1976d2;margin-top:4px;">多线程同时采集多个平台</div>
+    </div>
+    <div style="background:#f3e5f5;border-radius:8px;padding:14px;text-align:center;">
+      <div style="font-size:28px;margin-bottom:6px;">📦</div>
+      <div style="font-size:13px;font-weight:600;color:#6a1b9a;">零配置部署</div>
+      <div style="font-size:11px;color:#7b1fa2;margin-top:4px;">一条命令启动，开箱即用</div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:24px;padding:16px;background:#fff3e0;border-radius:8px;border:2px solid #ff9800;">
+  <h3 style="color:#e65100;margin:0 0 8px 0;">💡 初始化数据示例说明</h3>
+  <p style="font-size:13px;color:#e65100;margin:0 0 8px 0;">
+    系统首次启动时，自动预置以下演示数据：
+  </p>
+  <ul style="font-size:13px;color:#bf360c;padding-left:20px;margin:0;line-height:1.8;">
+    <li><strong>3个关键词</strong>：iPhone 15 Pro、AirPods Pro、戴森吹风机</li>
+    <li><strong>每个关键词 30+ 商品</strong>：覆盖京东/淘宝/拼多多三大平台</li>
+    <li><strong>历史价格数据</strong>：每个商品有最近30天的价格波动记录</li>
+    <li><strong>完整的字段</strong>：名称、价格、销量、评分、店铺、链接等全部齐全</li>
+    <li>打开网页即可看到完整的演示效果，无需等待采集</li>
+  </ul>
+</div>

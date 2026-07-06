@@ -1,0 +1,71 @@
+<h2>数据模型 & 数据库设计</h2>
+<p class="subtitle">SQLite 数据库，3张核心表，简洁高效</p>
+
+<div class="section">
+  <h3>数据库表结构</h3>
+  <div style="background:#f8f9fa;border-radius:12px;padding:20px;margin-top:12px;">
+    
+    <div style="background:#fff;border-radius:8px;border:2px solid #1976d2;padding:16px;margin-bottom:16px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <h4 style="color:#1976d2;margin:0;">📋 products — 商品信息表</h4>
+        <span style="font-size:11px;background:#e3f2fd;color:#1976d2;padding:2px 8px;border-radius:10px;">主表</span>
+      </div>
+      <table style="width:100%;font-size:13px;border-collapse:collapse;">
+        <tr style="background:#f5f5f5;">
+          <th style="text-align:left;padding:6px 8px;">字段名</th>
+          <th style="text-align:left;padding:6px 8px;">类型</th>
+          <th style="text-align:left;padding:6px 8px;">说明</th>
+        </tr>
+        <tr><td style="padding:6px 8px;border-bottom:1px solid #eee;">id</td><td style="padding:6px 8px;border-bottom:1px solid #eee;">INTEGER PK</td><td style="padding:6px 8px;border-bottom:1px solid #eee;">主键自增</td></tr>
+        <tr><td style="padding:6px 8px;border-bottom:1px solid #eee;">product_key</td><td style="padding:6px 8px;border-bottom:1px solid #eee;">VARCHAR(64) UNIQUE</td><td style="padding:6px 8px;border-bottom:1px solid #eee;">商品唯一标识 (平台+商品ID)</td></tr>
+        <tr><td style="padding:6px 8px;border-bottom:1px solid #eee;">platform</td><td style="padding:6px 8px;border-bottom:1px solid #eee;">VARCHAR(20)</td><td style="padding:6px 8px;border-bottom:1px solid #eee;">平台: jd/taobao/pinduoduo</td></tr>
+        <tr><td style="padding:6px 8px;border-bottom:1px solid #eee;">title</td><td style="padding:6px 8px;border-bottom:1px solid #eee;">VARCHAR(500)</td><td style="padding:6px 8px;border-bottom:1px solid #eee;">商品标题</td></tr>
+        <tr><td style="padding:6px 8px;border-bottom:1px solid #eee;">url</td><td style="padding:6px 8px;border-bottom:1px solid #eee;">VARCHAR(1000)</td><td style="padding:6px 8px;border-bottom:1px solid #eee;">商品链接</td></tr>
+        <tr><td style="padding:6px 8px;border-bottom:1px solid #eee;">image_url</td><td style="padding:6px 8px;border-bottom:1px solid #eee;">VARCHAR(1000)</td><td style="padding:6px 8px;border-bottom:1px solid #eee;">商品图片链接</td></tr>
+        <tr><td style="padding:6px 8px;border-bottom:1px solid #eee;">shop_name</td><td style="padding:6px 8px;border-bottom:1px solid #eee;">VARCHAR(200)</td><td style="padding:6px 8px;border-bottom:1px solid #eee;">店铺名称</td></tr>
+        <tr><td style="padding:6px 8px;border-bottom:1px solid #eee;">shop_rating</td><td style="padding:6px 8px;border-bottom:1px solid #eee;">FLOAT</td><td style="padding:6px 8px;border-bottom:1px solid #eee;">店铺评分 (0-5)</td></tr>
+        <tr><td style="padding:6px 8px;border-bottom:1px solid #eee;">sales</td><td style="padding:6px 8px;border-bottom:1px solid #eee;">INTEGER</td><td style="padding:6px 8px;border-bottom:1px solid #eee;">销量</td></tr>
+        <tr><td style="padding:6px 8px;">keyword</td><td style="padding:6px 8px;">VARCHAR(100)</td><td style="padding:6px 8px;">搜索关键词</td></tr>
+      </table>
+    </div>
+
+    <div style="background:#fff;border-radius:8px;border:2px solid #388e3c;padding:16px;margin-bottom:16px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <h4 style="color:#388e3c;margin:0;">💰 price_history — 价格历史表</h4>
+        <span style="font-size:11px;background:#e8f5e9;color:#388e3c;padding:2px 8px;border-radius:10px;">趋势分析</span>
+      </div>
+      <table style="width:100%;font-size:13px;border-collapse:collapse;">
+        <tr style="background:#f5f5f5;">
+          <th style="text-align:left;padding:6px 8px;">字段名</th>
+          <th style="text-align:left;padding:6px 8px;">类型</th>
+          <th style="text-align:left;padding:6px 8px;">说明</th>
+        </tr>
+        <tr><td style="padding:6px 8px;border-bottom:1px solid #eee;">id</td><td style="padding:6px 8px;border-bottom:1px solid #eee;">INTEGER PK</td><td style="padding:6px 8px;border-bottom:1px solid #eee;">主键自增</td></tr>
+        <tr><td style="padding:6px 8px;border-bottom:1px solid #eee;">product_key</td><td style="padding:6px 8px;border-bottom:1px solid #eee;">VARCHAR(64)</td><td style="padding:6px 8px;border-bottom:1px solid #eee;">关联商品唯一标识</td></tr>
+        <tr><td style="padding:6px 8px;border-bottom:1px solid #eee;">price</td><td style="padding:6px 8px;border-bottom:1px solid #eee;">DECIMAL(10,2)</td><td style="padding:6px 8px;border-bottom:1px solid #eee;">价格</td></tr>
+        <tr><td style="padding:6px 8px;border-bottom:1px solid #eee;">collected_at</td><td style="padding:6px 8px;border-bottom:1px solid #eee;">DATETIME</td><td style="padding:6px 8px;border-bottom:1px solid #eee;">采集时间</td></tr>
+        <tr><td style="padding:6px 8px;">keyword</td><td style="padding:6px 8px;">VARCHAR(100)</td><td style="padding:6px 8px;">搜索关键词 (方便按关键词查询)</td></tr>
+      </table>
+    </div>
+
+    <div style="background:#fff;border-radius:8px;border:2px solid #f57c00;padding:16px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <h4 style="color:#f57c00;margin:0;">🔍 search_records — 采集记录表</h4>
+        <span style="font-size:11px;background:#fff3e0;color:#f57c00;padding:2px 8px;border-radius:10px;">任务追踪</span>
+      </div>
+      <table style="width:100%;font-size:13px;border-collapse:collapse;">
+        <tr style="background:#f5f5f5;">
+          <th style="text-align:left;padding:6px 8px;">字段名</th>
+          <th style="text-align:left;padding:6px 8px;">类型</th>
+          <th style="text-align:left;padding:6px 8px;">说明</th>
+        </tr>
+        <tr><td style="padding:6px 8px;border-bottom:1px solid #eee;">id</td><td style="padding:6px 8px;border-bottom:1px solid #eee;">INTEGER PK</td><td style="padding:6px 8px;border-bottom:1px solid #eee;">主键自增</td></tr>
+        <tr><td style="padding:6px 8px;border-bottom:1px solid #eee;">keyword</td><td style="padding:6px 8px;border-bottom:1px solid #eee;">VARCHAR(100)</td><td style="padding:6px 8px;border-bottom:1px solid #eee;">搜索关键词</td></tr>
+        <tr><td style="padding:6px 8px;border-bottom:1px solid #eee;">platforms</td><td style="padding:6px 8px;border-bottom:1px solid #eee;">VARCHAR(100)</td><td style="padding:6px 8px;border-bottom:1px solid #eee;">采集的平台列表 (JSON)</td></tr>
+        <tr><td style="padding:6px 8px;border-bottom:1px solid #eee;">product_count</td><td style="padding:6px 8px;border-bottom:1px solid #eee;">INTEGER</td><td style="padding:6px 8px;border-bottom:1px solid #eee;">采集商品数量</td></tr>
+        <tr><td style="padding:6px 8px;border-bottom:1px solid #eee;">status</td><td style="padding:6px 8px;border-bottom:1px solid #eee;">VARCHAR(20)</td><td style="padding:6px 8px;border-bottom:1px solid #eee;">状态: running/completed/failed</td></tr>
+        <tr><td style="padding:6px 8px;">created_at</td><td style="padding:6px 8px;">DATETIME</td><td style="padding:6px 8px;">采集时间</td></tr>
+      </table>
+    </div>
+  </div>
+</div>

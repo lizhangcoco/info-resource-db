@@ -1,0 +1,150 @@
+import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime
+from typing import List, Callable, Optional
+
+from collectors.real_collector import get_real_collectors
+from core.cleaner import clean_products
+from core.analyzer import full_analysis
+from storage import database
+from storage.models import Product, PricePoint
+
+
+class CollectEngine:
+    def __init__(self):
+        self._active_tasks = {}
+
+    def search(self, keyword: str, platforms: List[str] = None, limit: int = 20,
+               progress_callback: Optional[Callable] = None) -> dict:
+        record_id = database.create_search_record(keyword, platforms or [])
+        all_products = []
+        errors = []
+
+        real_collectors = get_real_collectors(platforms)
+
+        def _collect_one(collector):
+            try:
+                if progress_callback:
+                    progress_callback(collector.platform, "collecting", 0)
+                products = collector.search(keyword, limit)
+                if progress_callback:
+                    progress_callback(collector.platform, "done", len(products) if products else 0)
+                return collector.platform, products or [], None
+            except Exception as e:
+                if progress_callback:
+                    progress_callback(collector.platform, "error", 0)
+                return collector.platform, [], f"{collector.name}: {str(e)}"
+
+        with ThreadPoolExecutor(max_workers=3) as executor:
+            futures = {executor.submit(_collect_one, c): c for c in real_collectors}
+            for future in as_completed(futures):
+                platform, products, error = future.result()
+                all_products.extend(products)
+                if error:
+                    errors.append(error)
+
+        if not all_products:
+            error_msg = "所有平台采集失败: " + "; ".join(errors) if errors else "未获取到任何商品数据"
+            database.update_search_record(record_id, product_count=0, status="failed", error_msg=error_msg)
+            raise Exception(error_msg)
+
+        all_products = clean_products(all_products)
+        database.batch_insert_products(all_products)
+
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        price_points = []
+        for p in all_products:
+            price_points.append(PricePoint(
+                product_key=p.product_key,
+                price=p.price,
+                collected_at=now,
+                keyword=keyword,
+            ))
+        database.batch_insert_price_history(price_points)
+
+        database.update_search_record(record_id, product_count=len(all_products), status="completed")
+
+        analysis = full_analysis(all_products)
+        analysis["record_id"] = record_id
+        analysis["errors"] = errors
+        return analysis
+
+    def search_async(self, keyword: str, platforms: List[str] = None, limit: int = 20) -> int:
+        record_id = database.create_search_record(keyword, platforms or [])
+        self._active_tasks[record_id] = {"status": "running", "progress": {}}
+
+        def _task():
+            try:
+                def _progress(platform, status, count):
+                    if record_id in self._active_tasks:
+                        self._active_tasks[record_id]["progress"][platform] = {
+                            "status": status,
+                            "count": count,
+                        }
+
+                result = self.search(keyword, platforms, limit, progress_callback=_progress)
+                if record_id in self._active_tasks:
+                    self._active_tasks[record_id]["status"] = "completed"
+                    self._active_tasks[record_id]["result"] = result
+            except Exception as e:
+                if record_id in self._active_tasks:
+                    self._active_tasks[record_id]["status"] = "failed"
+                    self._active_tasks[record_id]["error"] = str(e)
+                database.update_search_record(record_id, status="failed")
+
+        t = threading.Thread(target=_task, daemon=True)
+        t.start()
+        return record_id
+
+    def get_task_status(self, record_id: int) -> dict:
+        if record_id in self._active_tasks:
+            task = self._active_tasks[record_id]
+            if task["status"] == "completed":
+                # 返回 result 而不是整个 task，确保 products 和 stats 在根级别
+                result = task.get("result", {})
+                return {
+                    "status": "completed",
+                    "product_count": len(result.get("products", [])),
+                    "products": result.get("products", []),
+                    "stats": result.get("stats", {}),
+                    "errors": result.get("errors", []),
+                }
+            if task["status"] == "failed":
+                return {
+                    "status": task["status"],
+                    "error": task.get("error", "采集失败"),
+                    "progress": task.get("progress", {}),
+                }
+            return {
+                "status": task["status"],
+                "progress": task.get("progress", {}),
+            }
+
+        record = database.get_search_records(limit=10)
+        for r in record:
+            if r.id == record_id:
+                if r.status == "failed":
+                    return {
+                        "status": r.status,
+                        "error": r.error_msg or "采集失败",
+                        "product_count": r.product_count,
+                    }
+                products = database.get_products_by_keyword(r.keyword)
+                stats = database.get_stats(r.keyword)
+                return {
+                    "status": r.status,
+                    "product_count": r.product_count,
+                    "products": [p.to_dict() for p in products],
+                    "stats": stats.to_dict(),
+                }
+        return {"status": "not_found"}
+
+
+_engine = None
+
+
+def get_engine() -> CollectEngine:
+    global _engine
+    if _engine is None:
+        _engine = CollectEngine()
+    return _engine

@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>绿通采购货物比价参考平台 - 多平台价格实时对比</title>
+    <link rel="stylesheet" href="/bijia/static/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="header-inner">
+                <div class="header-top">
+                    <div class="logo-section">
+                        <div class="logo-icon">
+                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M3 3H5L5.4 5M7 13H17L19 5H5.4M7 13L5.4 5M7 13L4.5 15.5C4.1 15.9 3.8 16.5 4 17C4.2 17.5 4.8 18 5.5 18H18" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                <circle cx="9" cy="20" r="1.5" fill="white"/>
+                                <circle cx="18" cy="20" r="1.5" fill="white"/>
+                            </svg>
+                        </div>
+                        <div class="logo-text">
+                            <h1>绿通采购货物比价参考平台</h1>
+                            <p>京东 · 淘宝 · 拼多多 多平台实时比价</p>
+                        </div>
+                    </div>
+                    <div class="header-actions">
+                        <div class="header-badge">
+                            <span class="badge-dot"></span>
+                            <span>实时采集</span>
+                        </div>
+                        <button class="upload-btn" onclick="window.location.href='/bijia/supplier-products'">
+                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M20 7h-9M14 17H5M20 7l-5.5 5.5M14 17l5.5-5.5M20 7v6a2 2 0 01-2 2H6a2 2 0 01-2-2V7a2 2 0 012-2h2" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            供应商商品
+                        </button>
+                        <button class="upload-btn" onclick="showUploadModal()">
+                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            导入数据
+                        </button>
+                    </div>
+                </div>
+
+                <div class="search-section">
+                    <div class="search-main">
+                        <div class="search-input-wrap">
+                            <svg class="search-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2"/>
+                                <path d="M21 21l-4.35-4.35" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                            </svg>
+                            <input type="text" id="keywordInput" placeholder="输入商品关键词，如：iPhone 15 Pro、戴森吹风机..." onkeydown="if(event.key==='Enter') doSearch()">
+                        </div>
+                        <button class="search-btn" id="searchBtn" onclick="doSearch()">
+                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" fill="white"/>
+                            </svg>
+                            开始比价
+                        </button>
+                    </div>
+                    
+                    <div class="platform-filters">
+                        <span class="filter-label">平台选择：</span>
+                        <label class="platform-filter jd-filter">
+                            <input type="checkbox" id="plat-jd" checked value="jd">
+                            <span class="checkbox-custom">
+                                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <polyline points="20 6 9 17 4 12" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </span>
+                            京东
+                        </label>
+                        <label class="platform-filter taobao-filter">
+                            <input type="checkbox" id="plat-taobao" checked value="taobao">
+                            <span class="checkbox-custom">
+                                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <polyline points="20 6 9 17 4 12" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </span>
+                            淘宝
+                        </label>
+                        <label class="platform-filter pdd-filter">
+                            <input type="checkbox" id="plat-pinduoduo" checked value="pinduoduo">
+                            <span class="checkbox-custom">
+                                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <polyline points="20 6 9 17 4 12" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </span>
+                            拼多多
+                        </label>
+                    </div>
+
+                    <div class="demo-keywords">
+                        <span class="label">热门搜索：</span>
+                        <span class="demo-tag" onclick="quickSearch('iPhone 15 Pro')">iPhone 15 Pro</span>
+                        <span class="demo-tag" onclick="quickSearch('AirPods Pro 2')">AirPods Pro 2</span>
+                        <span class="demo-tag" onclick="quickSearch('戴森吹风机 HD15')">戴森吹风机 HD15</span>
+                        <span class="demo-tag" onclick="quickSearch('Nike Air Force')">Nike Air Force</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <section class="quick-entry-section">
+            <div class="entry-card" onclick="window.location.href='/bijia/supplier-products?type=goods'">
+                <div class="entry-icon goods">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+                <div class="entry-content">
+                    <h3>供应商货物</h3>
+                    <p>浏览认证供应商提供的实物商品</p>
+                </div>
+                <svg class="entry-arrow" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <polyline points="9 18 15 12 9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+            <div class="entry-card" onclick="window.location.href='/bijia/supplier-products?type=service'">
+                <div class="entry-icon service">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 2L2 7l10 5 10-5-10-5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M2 17l10 5 10-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M2 12l10 5 10-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+                <div class="entry-content">
+                    <h3>供应商服务</h3>
+                    <p>查找专业服务供应商，比价择优</p>
+                </div>
+                <svg class="entry-arrow" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <polyline points="9 18 15 12 9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+        </section>
+
+        <section class="stats-section">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon-wrap blue">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z" stroke="currentColor" stroke-width="2"/>
+                            <polyline points="3.27 6.96 12 12.01 20.73 6.96" stroke="currentColor" stroke-width="2"/>
+                            <line x1="12" y1="22.08" x2="12" y2="12" stroke="currentColor" stroke-width="2"/>
+                        </svg>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-label">采集商品</div>
+                        <div class="stat-value blue" id="stat-total">0</div>
+                        <div class="stat-sub">件商品</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon-wrap green">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <line x1="12" y1="1" x2="12" y2="23" stroke="currentColor" stroke-width="2"/>
+                            <path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-label">最低价</div>
+                        <div class="stat-value green" id="stat-min">¥0</div>
+                        <div class="stat-sub">历史最低</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon-wrap orange">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <line x1="18" y1="20" x2="18" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                            <line x1="12" y1="20" x2="12" y2="4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                            <line x1="6" y1="20" x2="6" y2="14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-label">平均价格</div>
+                        <div class="stat-value orange" id="stat-avg">¥0</div>
+                        <div class="stat-sub">全网均价</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon-wrap purple">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+                        </svg>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-label">推荐商品</div>
+                        <div class="stat-value purple" id="stat-rec">0</div>
+                        <div class="stat-sub">性价比之选</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <main class="main-content">
+            <div class="content-grid">
+                <div class="panel">
+                    <div class="panel-header">
+                        <div class="panel-title">
+                            <svg class="panel-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M9 11l3 3L22 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                            </svg>
+                            商品列表
+                            <span class="panel-count" id="productCount">0</span>
+                        </div>
+                        <div class="panel-actions">
+                            <select class="sort-select" id="sortSelect" onchange="sortProducts()">
+                                <option value="price-asc">价格从低到高</option>
+                                <option value="price-desc">价格从高到低</option>
+                                <option value="sales-desc">销量从高到低</option>
+                                <option value="rating-desc">评分从高到低</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="product-list" id="productList">
+                        <div class="empty-state">
+                            <div class="empty-icon">
+                                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2"/>
+                                    <path d="M21 21l-4.35-4.35" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                                </svg>
+                            </div>
+                            <p>输入关键词开始比价</p>
+                            <p class="small">支持京东、淘宝、拼多多多平台对比</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="right-column">
+                    <div class="panel">
+                        <div class="panel-header">
+                            <div class="panel-title">
+                                <svg class="panel-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <line x1="18" y1="20" x2="18" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                                    <line x1="12" y1="20" x2="12" y2="4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                                    <line x1="6" y1="20" x2="6" y2="14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                                </svg>
+                                平台价格对比
+                            </div>
+                        </div>
+                        <div class="chart-box">
+                            <div id="platformChart" class="chart-container"></div>
+                        </div>
+                    </div>
+
+                    <div class="panel">
+                        <div class="panel-header">
+                            <div class="panel-title">
+                                <svg class="panel-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <polyline points="17 6 23 6 23 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                                价格趋势
+                            </div>
+                        </div>
+                        <div class="chart-box" style="height: 300px;">
+                            <div id="trendChart" class="chart-container"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- 数据上传弹窗 -->
+    <div id="uploadModal" class="modal">
+        <div class="modal-backdrop" onclick="closeUploadModal()"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title-wrap">
+                    <div class="modal-icon">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3>导入自定义数据</h3>
+                        <p>上传历史成交数据，与电商平台实时比价</p>
+                    </div>
+                </div>
+                <button class="modal-close" onclick="closeUploadModal()">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="modal-body">
+                <div class="upload-tabs">
+                    <button class="upload-tab active" onclick="switchUploadTab('json')">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke="currentColor" stroke-width="2"/>
+                            <polyline points="14 2 14 8 20 8" stroke="currentColor" stroke-width="2"/>
+                            <line x1="16" y1="13" x2="8" y2="13" stroke="currentColor" stroke-width="2"/>
+                            <line x1="16" y1="17" x2="8" y2="17" stroke="currentColor" stroke-width="2"/>
+                            <polyline points="10 9 9 9 8 9" stroke="currentColor" stroke-width="2"/>
+                        </svg>
+                        JSON 格式
+                    </button>
+                    <button class="upload-tab" onclick="switchUploadTab('manual')">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 20h9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                            <path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+                        </svg>
+                        手动添加
+                    </button>
+                </div>
+
+                <!-- JSON 导入面板 -->
+                <div id="jsonPanel" class="upload-panel active">
+                    <div class="form-group">
+                        <label class="form-label">
+                            商品关键词
+                            <span class="form-required">*</span>
+                        </label>
+                        <div class="input-icon-wrap">
+                            <svg class="input-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2"/>
+                                <path d="M21 21l-4.35-4.35" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                            </svg>
+                            <input type="text" id="uploadKeyword" placeholder="如：iPhone 15 Pro">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="form-label-row">
+                            <label class="form-label">
+                                商品数据
+                                <span class="form-required">*</span>
+                            </label>
+                            <button class="link-btn" onclick="loadUploadTemplate()">
+                                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke="currentColor" stroke-width="2"/>
+                                    <polyline points="14 2 14 8 20 8" stroke="currentColor" stroke-width="2"/>
+                                </svg>
+                                加载示例模板
+                            </button>
+                        </div>
+                        <div class="textarea-wrap">
+                            <textarea id="uploadData" placeholder='[
+  {
+    "title": "商品名称",
+    "price": 1999.00,
+    "sales": 1000,
+    "shop_name": "店铺名称"
+  },
+  {
+    "title": "商品名称2",
+    "price": 2999.00,
+    "sales": 500,
+    "shop_name": "店铺名称2"
+  }
+]'></textarea>
+                        </div>
+                        <div class="form-hint">
+                            支持字段：title（商品名）、price（价格）、sales（销量）、shop_name（店铺名）、shop_rating（评分）
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 手动添加面板 -->
+                <div id="manualPanel" class="upload-panel">
+                    <div class="form-group">
+                        <label class="form-label">
+                            商品关键词
+                            <span class="form-required">*</span>
+                        </label>
+                        <div class="input-icon-wrap">
+                            <svg class="input-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2"/>
+                                <path d="M21 21l-4.35-4.35" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                            </svg>
+                            <input type="text" id="manualKeyword" placeholder="如：iPhone 15 Pro">
+                        </div>
+                    </div>
+
+                    <div class="manual-form-row">
+                        <div class="form-group flex-1">
+                            <label class="form-label">商品名称</label>
+                            <input type="text" id="manualTitle" placeholder="输入商品名称">
+                        </div>
+                        <div class="form-group" style="width: 120px;">
+                            <label class="form-label">价格 (元)</label>
+                            <input type="number" id="manualPrice" placeholder="0.00" step="0.01">
+                        </div>
+                    </div>
+
+                    <div class="manual-form-row">
+                        <div class="form-group flex-1">
+                            <label class="form-label">店铺名称</label>
+                            <input type="text" id="manualShop" placeholder="选填">
+                        </div>
+                        <div class="form-group" style="width: 120px;">
+                            <label class="form-label">销量</label>
+                            <input type="number" id="manualSales" placeholder="0">
+                        </div>
+                    </div>
+
+                    <button class="add-item-btn" onclick="addManualItem()">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                            <line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                        添加到列表
+                    </button>
+
+                    <div class="manual-list" id="manualList">
+                        <div class="manual-empty">
+                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                                <line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                            </svg>
+                            <p>点击上方按钮添加商品</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeUploadModal()">取消</button>
+                <button class="btn btn-primary" id="submitUploadBtn" onclick="submitUploadData()">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <polyline points="20 6 9 17 4 12" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    导入并比价
+                </button>
+            </div>
+
+            <div class="upload-result" id="uploadResult"></div>
+        </div>
+    </div>
+
+    <script>
+        window.API_BASE = '/bijia';
+        window.APP_ROOT = '/bijia';
+    </script>
+    <script src="/bijia/static/js/app.js"></script>
+</body>
+</html>

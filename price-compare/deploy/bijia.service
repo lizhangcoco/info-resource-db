@@ -1,0 +1,30 @@
+[Unit]
+Description=E-commerce Price Comparison System
+After=network.target nginx.service
+
+[Service]
+Type=simple
+User=root
+Group=root
+WorkingDirectory=/www/bijia-system/price-compare
+Environment="PATH=/www/bijia-system/price-compare/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+Environment="FLASK_ENV=production"
+ExecStart=/www/bijia-system/price-compare/venv/bin/gunicorn wsgi:app \
+    --bind 127.0.0.1:8081 \
+    --workers 4 \
+    --worker-class sync \
+    --timeout 120 \
+    --keep-alive 5 \
+    --access-logfile /www/bijia-system/price-compare/logs/access.log \
+    --error-logfile /www/bijia-system/price-compare/logs/error.log \
+    --log-level info \
+    --pid /www/bijia-system/price-compare/bijia.pid
+ExecReload=/bin/kill -s HUP $MAINPID
+ExecStop=/bin/kill -s TERM $MAINPID
+Restart=always
+RestartSec=5
+LimitNOFILE=65536
+LimitNPROC=4096
+
+[Install]
+WantedBy=multi-user.target
